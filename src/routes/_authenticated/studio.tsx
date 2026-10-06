@@ -49,9 +49,9 @@ function Studio() {
   const [voiceModel, setVoiceModel] = useState("xtts-v2");
   const [avatarModel, setAvatarModel] = useState("sadtalker");
   const [subs, setSubs] = useState(true);
-  const [font, setFont] = useState(FONTS[0].id);
-  const [color, setColor] = useState(COLORS[0]);
-  const [bg, setBg] = useState(BGS[0].id);
+  const [font, setFont] = useState<string>("Readex Pro");
+  const [color, setColor] = useState<string>(COLORS[0]!);
+  const [bg, setBg] = useState<string>(BGS[0]!.id);
   const [size, setSize] = useState(22);
   const [translateTo, setTranslateTo] = useState("");
   const [busy, setBusy] = useState<string | null>(null);
@@ -85,10 +85,10 @@ function Studio() {
     }
   }
 
-  async function save(status: "draft" | "queued") {
-    if (!title.trim()) return toast.error("أدخل عنوانًا للفيديو");
-    if (!imageId) return toast.error("ارفع صورة أولًا");
-    if (voiceMode === "tts" && !script.trim()) return toast.error("أدخل النص");
+  async function save(status: "draft" | "queued"): Promise<void> {
+    if (!title.trim()) { toast.error("أدخل عنوانًا للفيديو");
+    if (!imageId) { toast.error("ارفع صورة أولًا");
+    if (voiceMode === "tts" && !script.trim()) { toast.error("أدخل النص");
     setBusy(status);
     const { error } = await supabase.from("video_projects").insert({
       title, script_text: script, avatar_asset_id: imageId, audio_asset_id: voiceMode === "upload" ? audioId : null,
@@ -96,7 +96,7 @@ function Studio() {
       subtitle_style: { font, color, bg, size }, translate_to: translateTo || null, status,
     });
     setBusy(null);
-    if (error) return toast.error(error.message);
+    if (error) { toast.error(error.message);
     toast.success(status === "queued" ? "أُضيف إلى قائمة الإنتاج — سيُعالج عند ربط النماذج" : "تم حفظ المسودة");
     qc.invalidateQueries({ queryKey: ["projects"] });
     navigate({ to: "/library" });
