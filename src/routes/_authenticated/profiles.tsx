@@ -32,6 +32,8 @@ function ProfilesPage() {
   const qc = useQueryClient();
   const [avatarName, setAvatarName] = useState("");
   const [voiceName, setVoiceName] = useState("");
+  const [voiceDialect, setVoiceDialect] = useState("ar-SD");
+  const [voiceKind, setVoiceKind] = useState<"cloned" | "licensed">("cloned");
   const [avatarAssets, setAvatarAssets] = useState<string[]>([]);
   const [voiceAssets, setVoiceAssets] = useState<string[]>([]);
   const [busy, setBusy] = useState(false);
@@ -94,7 +96,7 @@ function ProfilesPage() {
     }
     const { error } = await supabase.from("voice_profiles").insert({
       name: voiceName.trim(), sample_asset_ids: voiceAssets, primary_sample_asset_id: primarySampleId, status: "ready",
-      enhancement: { ...fx, studio_quality: true },
+      enhancement: { ...fx, studio_quality: true, dialect: voiceDialect, voice_kind: voiceKind },
     });
     if (error) { toast.error(error.message); return; }
     setVoiceName(""); setVoiceAssets([]); await qc.invalidateQueries({ queryKey: ["voice-profiles"] });
@@ -127,6 +129,8 @@ function ProfilesPage() {
             <div className="mb-4 flex items-start gap-3"><Mic2 className="mt-1 size-5 text-gold" /><div><h2 className="font-bold">إنشاء صوت استوديو ثابت</h2><p className="text-sm text-muted-foreground">سجّل في مكان هادئ وبنبرة طبيعية. سيُحفظ مع إعدادات وضوح وتنقية قصوى.</p></div></div>
             <Label htmlFor="voice-name">اسم الصوت</Label>
             <Input id="voice-name" className="mt-2" value={voiceName} onChange={(e) => setVoiceName(e.target.value)} placeholder="مثال: صوتي الرسمي" />
+            <div className="mt-4 grid gap-3 sm:grid-cols-2"><label className="text-sm">نوع الصوت<select className="mt-1 h-10 w-full rounded-md border border-input bg-background px-3" value={voiceKind} onChange={(e) => setVoiceKind(e.target.value as typeof voiceKind)}><option value="cloned">صوتي المستنسخ</option><option value="licensed">صوت جاهز مرخّص</option></select></label><label className="text-sm">اللهجة الأساسية<select className="mt-1 h-10 w-full rounded-md border border-input bg-background px-3" value={voiceDialect} onChange={(e) => setVoiceDialect(e.target.value)}><option value="ar-SD">السودانية</option><option value="ar-SA">الخليجية / السعودية</option><option value="ar-EG">المصرية</option><option value="ar-LB">الشامية</option><option value="ar-IQ">العراقية</option><option value="ar-YE">اليمنية</option><option value="ar-MA">المغاربية</option><option value="ar">العربية الفصحى</option><option value="en">English</option></select></label></div>
+            {voiceKind === "licensed" && <p className="mt-3 rounded-lg bg-secondary p-3 text-xs text-muted-foreground">ارفع عينة صوت تملك ترخيص استخدامها. ستُضاف مكتبة أصوات جاهزة عند ربط مزود أو ملفات مرخّصة.</p>}
             <input ref={audioInput} hidden multiple type="file" accept="audio/*" onChange={(e) => uploadMany(e.target.files, "audio")} />
             <Button className="mt-4" variant="glass" disabled={busy} onClick={() => audioInput.current?.click()}><Upload />رفع عينات الصوت</Button>
             <span className="ms-2 inline-block"><AudioRecorder label="سجّل صوتك الآن" onSave={(f) => uploadMany([f], "audio")} /></span>
