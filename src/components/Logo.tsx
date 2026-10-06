@@ -1,10 +1,10 @@
-import { Sparkles } from "lucide-react";
+import { AlabageraPortrait } from "@/components/AlabageraPortrait";
 
 export function Logo({ compact = false }: { compact?: boolean }) {
   return (
     <div className="flex items-center gap-2">
-      <span className="grid size-9 place-items-center rounded-xl bg-gold-gradient shadow-gold">
-        <Sparkles className="size-5 text-primary-foreground" />
+      <span className="size-10 overflow-hidden rounded-full border-2 border-gold shadow-gold">
+        <AlabageraPortrait className="size-full" eager />
       </span>
       {!compact && (
         <span className="font-display text-lg font-bold leading-none">

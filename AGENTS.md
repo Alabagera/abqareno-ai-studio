@@ -16,3 +16,4 @@
 - Workspace sharing is owner-based: member assets and projects resolve through `workspace_owner_id`, while privileged account management stays in authenticated server functions.
 - Member navigation and model disclosure derive from the database-backed `my_workspace_access` function so client state cannot elevate permissions.
 - Self-hosted model server URLs are stored per owner in `model_endpoints` (owner-only RLS) so models change without rebuilding.
+- Assistant conversations persist as workspace-scoped threads with route-derived IDs; message files remain private library assets.

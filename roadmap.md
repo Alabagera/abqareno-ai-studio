@@ -22,3 +22,7 @@
 - [x] Add a self-hosted Qwen assistant model path with Arabic and English support.
 - [x] Phase 2 step 1: owner can link each open-source model to a self-hosted server (URL + test).
 - [x] Add image, image-edit, document, slides and business open models with easy setup guide.
+- [x] Add database-backed assistant conversations with dedicated URLs and multiple work modes.
+- [x] Add assistant file upload, private library storage, downloads, and deletion controls.
+- [x] Add professional translation, coding, and course-creation assistant capabilities and models.
+- [x] Apply the uploaded Alabagera portrait as the product identity.

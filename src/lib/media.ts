@@ -17,6 +17,7 @@ export function detectKind(file: File): MediaKind {
 }
 
 export async function uploadMedia(file: File, kind: MediaKind = detectKind(file)) {
+  if (file.size > 20 * 1024 * 1024) throw new Error("الحد الأقصى للملف 20 ميجابايت");
   const { data: u } = await supabase.auth.getUser();
   if (!u.user) throw new Error("يجب تسجيل الدخول");
   const { data: ownerId, error: ownerError } = await supabase.rpc("workspace_owner_id", { _user_id: u.user.id });
@@ -40,8 +41,21 @@ export async function signedUrl(path: string) {
 }
 
 export async function deleteMedia(id: string, path: string) {
-  await supabase.storage.from("media").remove([path]);
-  await supabase.from("media_assets").delete().eq("id", id);
+  const removed = await supabase.storage.from("media").remove([path]);
+  if (removed.error) throw removed.error;
+  const deleted = await supabase.from("media_assets").delete().eq("id", id);
+  if (deleted.error) throw deleted.error;
+}
+
+export async function downloadMedia(path: string, filename: string) {
+  const url = await signedUrl(path);
+  if (!url) throw new Error("تعذر تجهيز رابط التنزيل");
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = filename;
+  a.target = "_blank";
+  a.rel = "noreferrer";
+  a.click();
 }
 
 export function formatSize(b?: number | null) {
