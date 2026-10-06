@@ -29,6 +29,13 @@
       "when": 1791263566230,
       "tag": "0003_member_permissions",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1791264711847,
+      "tag": "0004_model_endpoints",
+      "breakpoints": true
     }
   ]
 }

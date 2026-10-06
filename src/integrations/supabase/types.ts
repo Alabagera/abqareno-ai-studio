@@ -91,6 +91,42 @@ export type Database = {
         }
         Relationships: []
       }
+      model_endpoints: {
+        Row: {
+          access_token: string | null
+          enabled: boolean
+          endpoint_url: string
+          id: string
+          last_checked_at: string | null
+          last_status: string | null
+          model_id: string
+          owner_id: string
+          updated_at: string
+        }
+        Insert: {
+          access_token?: string | null
+          enabled?: boolean
+          endpoint_url?: string
+          id?: string
+          last_checked_at?: string | null
+          last_status?: string | null
+          model_id: string
+          owner_id: string
+          updated_at?: string
+        }
+        Update: {
+          access_token?: string | null
+          enabled?: boolean
+          endpoint_url?: string
+          id?: string
+          last_checked_at?: string | null
+          last_status?: string | null
+          model_id?: string
+          owner_id?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           created_at: string
