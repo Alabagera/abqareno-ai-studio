@@ -184,8 +184,6 @@ function Studio() {
   }
 
   const sample = script.trim().split(/[.!؟?\n]/)[0]?.slice(0, 60) || "هنا تظهر الترجمة النصية";
-  const platforms = [...new Set(SOCIAL_SIZES.map((s) => s.platform))];
-
   return (
     <div>
       <PageHeader title="إنشاء فيديو متحدث" subtitle="صورة + نص/صوت ← فيديو Talking Avatar" />

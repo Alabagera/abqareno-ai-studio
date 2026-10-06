@@ -71,7 +71,7 @@ function MemberControls({ member, onSaved }: { member: { id: string; max_videos:
   const p = typeof member.permissions === "object" && member.permissions ? member.permissions as Record<string, unknown> : {};
   const [v, setV] = useState(member.max_videos?.toString() ?? "");
   const [m, setM] = useState(member.max_minutes_per_video?.toString() ?? "");
-  const [permissions, setPermissions] = useState({ studio: p.studio !== false, library: p.library !== false, team: p.team === true, models: p.models === true, show_model_names: p.show_model_names === true });
+  const [permissions, setPermissions] = useState({ studio: p["studio"] !== false, library: p["library"] !== false, team: p["team"] === true, models: p["models"] === true, show_model_names: p["show_model_names"] === true });
   async function save() {
     const { error } = await supabase.from("team_members").update({ max_videos: v === "" ? null : +v, max_minutes_per_video: m === "" ? null : +m, permissions }).eq("id", member.id);
     if (error) toast.error(error.message); else { toast.success("تم حفظ الحدود"); onSaved(); }

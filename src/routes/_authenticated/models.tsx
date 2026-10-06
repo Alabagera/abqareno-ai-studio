@@ -12,8 +12,8 @@ export const Route = createFileRoute("/_authenticated/models")({
 function Models() {
   const { data: access } = useQuery({ queryKey: ["workspace-access"], queryFn: async () => (await supabase.rpc("my_workspace_access")).data as Record<string, boolean> | null });
   const tasks = Object.keys(TASK_LABELS) as ModelTask[];
-  if (access && !access.models) return <div className="glass rounded-2xl p-8 text-center text-muted-foreground">لم يمنحك المدير صلاحية عرض هذه الصفحة.</div>;
-  const showNames = access?.show_model_names === true;
+  if (access && !access["models"]) return <div className="glass rounded-2xl p-8 text-center text-muted-foreground">لم يمنحك المدير صلاحية عرض هذه الصفحة.</div>;
+  const showNames = access?.["show_model_names"] === true;
   return (
     <div>
       <PageHeader title="النماذج والأدوات" subtitle="سجل قابل للتوسعة — أضف أو بدّل أي نموذج مفتوح المصدر دون إعادة بناء الموقع" />
