@@ -7,8 +7,11 @@ export function useAuth() {
   const [loading, setLoading] = useState(true);
   useEffect(() => {
     const { data: sub } = supabase.auth.onAuthStateChange((_e, s) => setSession(s));
-    supabase.auth.getSession().then(({ data }) => {
+    supabase.auth.getSession().then(async ({ data }) => {
       setSession(data.session);
+      if (data.session?.user) {
+        await supabase.rpc("bootstrap_primary_owner");
+      }
       setLoading(false);
     });
     return () => sub.subscription.unsubscribe();

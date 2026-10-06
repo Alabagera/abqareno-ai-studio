@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { PageHeader, STATUS_LABEL } from "@/components/PageHeader";
 
 export const Route = createFileRoute("/_authenticated/dashboard")({
-  head: () => ({ meta: [{ title: "لوحة التحكم — عبقرينو" }, { name: "description", content: "نظرة عامة على مشاريعك وملفاتك." }] }),
+  head: () => ({ meta: [{ title: "لوحة التحكم — عبقرينو" }, { name: "description", content: "نظرة عامة على مشاريعك وملفاتك." }, { property: "og:title", content: "لوحة تحكم عبقرينو" }, { property: "og:description", content: "إدارة مشاريع وملفات عبقرينو AI Studio." }, { property: "og:type", content: "website" }, { name: "twitter:card", content: "summary_large_image" }] }),
   component: Dashboard,
 });
 

@@ -19,8 +19,10 @@ export function detectKind(file: File): MediaKind {
 export async function uploadMedia(file: File, kind: MediaKind = detectKind(file)) {
   const { data: u } = await supabase.auth.getUser();
   if (!u.user) throw new Error("يجب تسجيل الدخول");
+  const { data: ownerId, error: ownerError } = await supabase.rpc("workspace_owner_id", { _user_id: u.user.id });
+  if (ownerError || !ownerId) throw ownerError ?? new Error("تعذر تحديد مساحة العمل");
   const ext = file.name.split(".").pop() || "bin";
-  const path = `${u.user.id}/${kind}/${crypto.randomUUID()}.${ext}`;
+  const path = `${ownerId}/${kind}/${crypto.randomUUID()}.${ext}`;
   const up = await supabase.storage.from("media").upload(path, file, { contentType: file.type });
   if (up.error) throw up.error;
   const { data, error } = await supabase

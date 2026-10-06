@@ -8,6 +8,13 @@
       "when": 1791254857237,
       "tag": "0000_studio_core",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1791258012758,
+      "tag": "0001_add_admin_team_avatar_voice_studio",
+      "breakpoints": true
     }
   ]
 }
