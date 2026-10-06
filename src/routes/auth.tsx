@@ -83,7 +83,14 @@ function AuthPage() {
             {mode === "in" ? "دخول" : "إنشاء الحساب"}
           </Button>
         </form>
-        <button className="mt-5 w-full text-center text-sm text-gold-soft" onClick={() => setMode(mode === "in" ? "up" : "in")}>
+        {mode === "in" && (
+          <button type="button" className="mt-4 w-full text-center text-xs text-muted-foreground underline" onClick={async () => {
+            if (!email) { toast.error("اكتب بريدك الإلكتروني أولًا"); return; }
+            const { error } = await supabase.auth.resetPasswordForEmail(email, { redirectTo: window.location.origin + "/reset-password" });
+            if (error) toast.error(error.message); else toast.success("أرسلنا رابط تعيين كلمة المرور إلى بريدك");
+          }}>نسيت كلمة المرور؟</button>
+        )}
+        <button className="mt-3 w-full text-center text-sm text-gold-soft" onClick={() => setMode(mode === "in" ? "up" : "in")}>
           {mode === "in" ? "ليس لديك حساب؟ أنشئ حسابًا" : "لديك حساب؟ سجّل الدخول"}
         </button>
       </div>
