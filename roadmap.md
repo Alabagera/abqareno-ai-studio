@@ -13,4 +13,4 @@
 - [x] Social media sizes, many fonts and colors.
 - [x] Light/dark mode and mobile polish.
 - [x] AI writing assistant.
-- [ ] Improve Arabic and English direction, typography, captions, and studio language controls.
+- [x] Improve Arabic and English direction, typography, captions, and studio language controls.
