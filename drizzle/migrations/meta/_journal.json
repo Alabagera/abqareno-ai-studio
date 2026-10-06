@@ -15,6 +15,13 @@
       "when": 1791258012758,
       "tag": "0001_add_admin_team_avatar_voice_studio",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1791260100444,
+      "tag": "0002_team_usage_limits",
+      "breakpoints": true
     }
   ]
 }
