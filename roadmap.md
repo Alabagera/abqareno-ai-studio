@@ -26,3 +26,5 @@
 - [x] Add assistant file upload, private library storage, downloads, and deletion controls.
 - [x] Add professional translation, coding, and course-creation assistant capabilities and models.
 - [x] Apply the uploaded Alabagera portrait as the product identity.
+- [x] Illustrated 4-step video guide on dashboard; marketing AI capabilities on homepage.
+- [x] Per-member allowed models; assistant model picker with descriptions and ready templates.
