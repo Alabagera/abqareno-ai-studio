@@ -2,7 +2,6 @@ import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
-import { lovable } from "@/integrations/lovable/index";
 import { useAuth } from "@/hooks/use-auth";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -26,7 +25,6 @@ export const Route = createFileRoute("/auth")({
 function AuthPage() {
   const nav = useNavigate();
   const { user } = useAuth();
-  const [mode, setMode] = useState<"in" | "up">("in");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [busy, setBusy] = useState(false);
@@ -39,18 +37,8 @@ function AuthPage() {
     e.preventDefault();
     setBusy(true);
     try {
-      if (mode === "in") {
-        const { error } = await supabase.auth.signInWithPassword({ email, password });
-        if (error) throw error;
-      } else {
-        const { error } = await supabase.auth.signUp({
-          email,
-          password,
-          options: { emailRedirectTo: window.location.origin + "/dashboard" },
-        });
-        if (error) throw error;
-        toast.success("تم إنشاء الحساب، تحقق من بريدك لتأكيده");
-      }
+      const { error } = await supabase.auth.signInWithPassword({ email, password });
+      if (error) throw error;
     } catch (err) {
       toast.error((err as Error).message);
     } finally {
@@ -58,18 +46,12 @@ function AuthPage() {
     }
   }
 
-  async function google() {
-    const r = await lovable.auth.signInWithOAuth("google", { redirect_uri: window.location.origin + "/auth" });
-    if (r.error) toast.error("تعذر تسجيل الدخول بجوجل");
-  }
-
   return (
     <div className="grid min-h-dvh place-items-center px-5">
       <div className="glass w-full max-w-sm rounded-3xl p-7">
         <div className="mb-6 flex justify-center"><Logo /></div>
-        <h1 className="mb-6 text-center text-xl font-bold">{mode === "in" ? "مرحبًا بعودتك" : "إنشاء حساب جديد"}</h1>
-        <Button variant="glass" className="w-full" onClick={google}>المتابعة باستخدام Google</Button>
-        <div className="my-5 text-center text-xs text-muted-foreground">أو بالبريد الإلكتروني</div>
+        <h1 className="mb-2 text-center text-xl font-bold">مرحبًا بعودتك</h1>
+        <p className="mb-6 text-center text-xs text-muted-foreground">الحسابات ينشئها المدير الرئيسي فقط</p>
         <form onSubmit={submit} className="space-y-4">
           <div className="space-y-1.5">
             <Label htmlFor="email">البريد الإلكتروني</Label>
@@ -80,19 +62,14 @@ function AuthPage() {
             <Input id="pw" type="password" dir="ltr" minLength={6} required value={password} onChange={(e) => setPassword(e.target.value)} />
           </div>
           <Button type="submit" variant="gold" className="w-full" disabled={busy}>
-            {mode === "in" ? "دخول" : "إنشاء الحساب"}
+            دخول
           </Button>
         </form>
-        {mode === "in" && (
-          <button type="button" className="mt-4 w-full text-center text-xs text-muted-foreground underline" onClick={async () => {
+        <Button type="button" variant="link" className="mt-4 w-full text-xs text-muted-foreground" onClick={async () => {
             if (!email) { toast.error("اكتب بريدك الإلكتروني أولًا"); return; }
             const { error } = await supabase.auth.resetPasswordForEmail(email, { redirectTo: window.location.origin + "/reset-password" });
             if (error) toast.error(error.message); else toast.success("أرسلنا رابط تعيين كلمة المرور إلى بريدك");
-          }}>نسيت كلمة المرور؟</button>
-        )}
-        <button className="mt-3 w-full text-center text-sm text-gold-soft" onClick={() => setMode(mode === "in" ? "up" : "in")}>
-          {mode === "in" ? "ليس لديك حساب؟ أنشئ حسابًا" : "لديك حساب؟ سجّل الدخول"}
-        </button>
+          }}>نسيت كلمة المرور؟</Button>
       </div>
     </div>
   );
