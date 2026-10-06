@@ -13,6 +13,10 @@ const SLIDERS: { k: keyof VoiceFx; l: string; min: number; max: number }[] = [
   { k: "compression", l: "قوة الحضور (إذاعي)", min: 0, max: 100 },
   { k: "reverb", l: "صدى القاعة", min: 0, max: 100 },
   { k: "gain", l: "مستوى الصوت", min: -6, max: 12 },
+  { k: "hum", l: "إزالة الهمهمة الكهربائية", min: 0, max: 100 },
+  { k: "deEss", l: "تقليل صفير السين والشين", min: 0, max: 100 },
+  { k: "speechFocus", l: "تركيز ووضوح الكلام", min: 0, max: 100 },
+  { k: "limiter", l: "منع التشويش والقمم", min: 0, max: 100 },
 ];
 
 export function VoiceEnhancer({ sourceUrl, value, onChange, onSaveFile }: { sourceUrl: string | null; value: VoiceFx; onChange: (fx: VoiceFx) => void; onSaveFile?: (file: File) => Promise<void> }) {
@@ -50,6 +54,7 @@ export function VoiceEnhancer({ sourceUrl, value, onChange, onSaveFile }: { sour
         </div>
         <Button type="button" variant="ghost" size="sm" className="mt-2" onClick={() => onChange(DEFAULT_FX)}>إعادة الضبط</Button>
       </details>
+      <p className="text-xs leading-5 text-muted-foreground">التحسين يحافظ على هوية الصوت ويعالج الضجيج والتوازن والوضوح. التسجيل شديد التلف قد يتحسن كثيرًا، لكن لا يمكن استعادة تفاصيل لم يلتقطها الميكروفون أصلًا.</p>
       <div className="flex flex-wrap gap-2">
         {sourceUrl && <audio controls src={sourceUrl} className="h-10 w-full" />}
         <Button type="button" variant="gold" disabled={busy} onClick={preview}><Wand2 />{busy ? "جارٍ المعالجة…" : "استمع للصوت المحسّن"}</Button>

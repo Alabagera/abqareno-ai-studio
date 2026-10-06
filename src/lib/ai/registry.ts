@@ -11,6 +11,7 @@ export interface AiModel {
   description: string;
   source: string;
   status: "planned" | "ready";
+  selfHosted?: boolean;
 }
 
 export const TASK_LABELS: Record<ModelTask, string> = {
@@ -24,8 +25,7 @@ export const TASK_LABELS: Record<ModelTask, string> = {
 
 export const AI_MODELS: AiModel[] = [
   { id: "openai/gpt-6-astra", task: "chat", name: "مساعد عبقرينو", description: "إجابة الأسئلة وكتابة السكربتات والإعلانات والمقالات", source: "Lovable AI", status: "ready" },
-  { id: "llama-3.3", task: "chat", name: "Llama 3.3", description: "نموذج محادثة مفتوح المصدر — بديل يمكن تشغيله على سيرفرك", source: "Meta", status: "planned" },
-  { id: "qwen-2.5", task: "chat", name: "Qwen 2.5", description: "نموذج مفتوح قوي في العربية", source: "Alibaba", status: "planned" },
+  { id: "qwen3-235b-a22b", task: "chat", name: "Qwen3-235B-A22B", description: "نموذج مفتوح ذاتي الاستضافة قوي في العربية والإنجليزية — يحتاج خادم استدلال خاص", source: "Qwen", status: "planned", selfHosted: true },
   { id: "xtts-v2", task: "tts", name: "XTTS-v2", description: "استنساخ صوتك من عينة قصيرة وتوليد كلام طبيعي بالعربية", source: "Coqui", status: "planned" },
   { id: "sadtalker", task: "avatar", name: "SadTalker", description: "تحريك صورة ثابتة لتتكلم بتزامن مع الصوت", source: "OpenTalker", status: "planned" },
   { id: "wav2lip", task: "avatar", name: "Wav2Lip", description: "مزامنة دقيقة لحركة الشفاه", source: "Rudrabha", status: "planned" },

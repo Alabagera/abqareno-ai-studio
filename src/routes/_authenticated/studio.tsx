@@ -2,7 +2,7 @@ import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
-import { ImagePlus, Mic, Paperclip, Sparkles, Image as ImageIcon, Stamp, Type, Volume2, Square } from "lucide-react";
+import { ImagePlus, Mic, Paperclip, Sparkles, Image as ImageIcon, Stamp, Type, Volume2, Square, Move } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { uploadMedia, signedUrl } from "@/lib/media";
 import { modelsFor } from "@/lib/ai/registry";
@@ -45,6 +45,7 @@ const LANGS = [
   { id: "", l: "بدون ترجمة" }, { id: "en", l: "الإنجليزية" }, { id: "fr", l: "الفرنسية" }, { id: "tr", l: "التركية" },
   { id: "es", l: "الإسبانية" }, { id: "de", l: "الألمانية" }, { id: "ur", l: "الأردية" }, { id: "id", l: "الإندونيسية" },
 ];
+type OverlayPosition = { x: number; y: number };
 
 function Studio() {
   const qc = useQueryClient();
@@ -75,10 +76,12 @@ function Studio() {
   const [size, setSize] = useState(22);
   const [translateTo, setTranslateTo] = useState("");
   const [activeColor, setActiveColor] = useState("#FFD700");
+  const [activeBg, setActiveBg] = useState("#1E3A8A");
   const [activeSize, setActiveSize] = useState(28);
   const [translationFont, setTranslationFont] = useState("Tajawal");
   const [translationColor, setTranslationColor] = useState("#03A9F4");
   const [translationActiveColor, setTranslationActiveColor] = useState("#FFD700");
+  const [translationActiveBg, setTranslationActiveBg] = useState("#1E3A8A");
   const [translationSize, setTranslationSize] = useState(20);
   const [sizeId, setSizeId] = useState("ig-reels");
   const [customW, setCustomW] = useState(1080);
@@ -86,6 +89,10 @@ function Studio() {
   const [rate, setRate] = useState(1);
   const [pitch, setPitch] = useState(1);
   const [speaking, setSpeaking] = useState(false);
+  const [titlePos, setTitlePos] = useState<OverlayPosition>({ x: 0.5, y: 0.12 });
+  const [extraPos, setExtraPos] = useState<OverlayPosition>({ x: 0.5, y: 0.48 });
+  const [captionPos, setCaptionPos] = useState<OverlayPosition>({ x: 0.5, y: 0.78 });
+  const [translationPos, setTranslationPos] = useState<OverlayPosition>({ x: 0.5, y: 0.9 });
   const [busy, setBusy] = useState<string | null>(null);
   const imgIn = useRef<HTMLInputElement>(null);
   const audIn = useRef<HTMLInputElement>(null);
@@ -105,6 +112,8 @@ function Studio() {
   const { data: avatarProfiles = [] } = useQuery({ queryKey: ["avatar-profiles"], queryFn: async () => (await supabase.from("avatar_profiles").select("*").eq("status", "ready").order("created_at", { ascending: false })).data ?? [] });
   const { data: voiceProfiles = [] } = useQuery({ queryKey: ["voice-profiles"], queryFn: async () => (await supabase.from("voice_profiles").select("*").eq("status", "ready").order("created_at", { ascending: false })).data ?? [] });
   const { data: usage } = useQuery({ queryKey: ["my-usage"], queryFn: async () => (await supabase.rpc("my_usage")).data as { max_videos: number | null; max_minutes_per_video: number | null; used: number } | null });
+  const { data: access } = useQuery({ queryKey: ["workspace-access"], queryFn: async () => (await supabase.rpc("my_workspace_access")).data as Record<string, boolean> | null });
+  const showModelNames = access?.["show_model_names"] === true;
 
   useEffect(() => { const s = sessionStorage.getItem("studio-script"); if (s) { setScript(s); sessionStorage.removeItem("studio-script"); } }, []);
   useEffect(() => { [font, titleFont, translationFont].forEach(loadFont); }, [font, titleFont, translationFont]);
@@ -162,10 +171,10 @@ function Studio() {
       title, script_text: script, avatar_asset_id: imageId, audio_asset_id: voiceMode === "upload" ? audioId : null,
       voice_model: voiceModel, avatar_model: avatarModel, avatar_profile_id: avatarProfileId || null,
       voice_profile_id: voiceProfileId || null, background_asset_id: backgroundId, logo_asset_id: logoId,
-      subtitles_enabled: subs, subtitle_style: { font, color, bg, size, activeColor, activeSize, language: scriptLanguage, direction: "auto" },
-      translate_to: translateTo || null, translation_style: { font: translationFont, color: translationColor, activeColor: translationActiveColor, size: translationSize },
-      title_overlay: { text: videoTitle, position: "top", font: titleFont, color: titleColor, direction: "auto" },
-      text_overlays: extraText.trim() ? [{ text: extraText.trim(), position: "middle", font: titleFont, color: titleColor, direction: "auto" }] : [],
+      subtitles_enabled: subs, subtitle_style: { font, color, bg, size, activeColor, activeBg, activeSize, language: scriptLanguage, direction: "auto", position: captionPos },
+      translate_to: translateTo || null, translation_style: { font: translationFont, color: translationColor, activeColor: translationActiveColor, activeBg: translationActiveBg, size: translationSize, position: translationPos },
+      title_overlay: { text: videoTitle, position: titlePos, font: titleFont, color: titleColor, direction: "auto" },
+      text_overlays: extraText.trim() ? [{ text: extraText.trim(), position: extraPos, font: titleFont, color: titleColor, direction: "auto" }] : [],
       logo_style: { position: "top-left", size: 18 }, status,
       aspect_ratio: sel.id === "custom" ? `${w}x${h}` : sel.ratio, platform: sel.id, duration_minutes: minutes || null,
     });
@@ -177,8 +186,6 @@ function Studio() {
   }
 
   const sample = script.trim().split(/[.!؟?\n]/)[0]?.slice(0, 60) || "هنا تظهر الترجمة النصية";
-  const platforms = [...new Set(SOCIAL_SIZES.map((s) => s.platform))];
-
   return (
     <div>
       <PageHeader title="إنشاء فيديو متحدث" subtitle="صورة + نص/صوت ← فيديو Talking Avatar" />
@@ -188,26 +195,31 @@ function Studio() {
           {usage?.max_minutes_per_video != null && <>الحد لكل فيديو: {usage.max_minutes_per_video} دقيقة.</>}
         </div>
       ) : null}
-      <div className="grid gap-5 lg:grid-cols-[1fr_380px]">
-        <div className="min-w-0 space-y-5">
+      <div className="space-y-5">
+        <div className="glass overflow-hidden rounded-2xl">
+          <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border p-3">
+            <div><h2 className="font-bold">معاينة الفيديو</h2><p className="text-xs text-muted-foreground"><Move className="me-1 inline size-3" />اسحب النصوص لتحديد مكانها</p></div>
+            <div className="min-w-[180px] flex-1 sm:max-w-xs"><label className="sr-only" htmlFor="preview-size">مقاس الفيديو</label><select id="preview-size" value={sizeId} onChange={(e) => setSizeId(e.target.value)} className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm">{SOCIAL_SIZES.map((s) => <option key={s.id} value={s.id}>{s.platform} · {s.label} {s.ratio === "custom" ? "" : s.ratio}</option>)}</select></div>
+          </div>
+          {sizeId === "custom" && <div className="grid grid-cols-2 gap-2 border-b border-border p-3"><label className="text-xs">العرض<Input type="number" value={customW} onChange={(e) => setCustomW(+e.target.value || 1)} /></label><label className="text-xs">الارتفاع<Input type="number" value={customH} onChange={(e) => setCustomH(+e.target.value || 1)} /></label></div>}
+          <div className="flex justify-center bg-muted/40 p-3">
+            <div className="relative w-full overflow-hidden rounded-xl bg-secondary" style={{ aspectRatio: `${w} / ${h}`, maxHeight: "62vh", maxWidth: `calc(62vh * ${w / h})` }}>
+              {backgroundUrl && <img src={backgroundUrl} alt="الخلفية" className="absolute inset-0 size-full object-cover" />}
+              {imageUrl ? <img src={imageUrl} alt="الأفاتار" className={`relative size-full ${backgroundUrl ? "object-contain object-bottom" : "object-cover"}`} /> : <div className="grid size-full place-items-center text-sm text-muted-foreground">معاينة الفيديو</div>}
+              {videoTitle && <Movable label="العنوان" pos={titlePos} onChange={setTitlePos}><span dir="auto" className="bilingual-text inline-block max-w-full rounded-lg bg-black/50 px-3 py-1 text-lg font-bold" style={{ fontFamily: `${titleFont}, Noto Sans Arabic, Noto Sans, sans-serif`, color: titleColor }}>{videoTitle}</span></Movable>}
+              {logoUrl && <img src={logoUrl} alt="الشعار" className="pointer-events-none absolute start-3 top-3 size-12 object-contain" />}
+              {extraText && <Movable label="النص الإضافي" pos={extraPos} onChange={setExtraPos}><span dir="auto" className="bilingual-text inline-block max-w-full rounded-lg bg-black/50 px-3 py-1 text-sm" style={{ fontFamily: `${titleFont}, Noto Sans Arabic, Noto Sans, sans-serif`, color: titleColor }}><Type className="me-1 inline size-3" />{extraText}</span></Movable>}
+              {subs && <Movable label="النص المنطوق" pos={captionPos} onChange={setCaptionPos}><span dir="auto" lang={scriptLanguage === "auto" ? undefined : scriptLanguage} className="bilingual-text inline-block max-w-full rounded-lg px-3 py-1.5 font-bold leading-relaxed" style={{ fontFamily: `${font}, Noto Sans Arabic, Noto Sans, sans-serif`, color, background: bg, fontSize: size }}>{sample.split(/(\s+)/).map((word, index) => <span key={`${word}-${index}`} className={index === 0 ? "rounded px-1" : undefined} style={index === 0 ? { color: activeColor, background: activeBg, fontSize: activeSize } : undefined}>{word}</span>)}</span></Movable>}
+              {subs && translateTo && <Movable label="الترجمة" pos={translationPos} onChange={setTranslationPos}><span dir={translateTo === "en" ? "ltr" : "auto"} lang={translateTo} className="bilingual-text block rounded bg-black/50 px-2 py-1 font-bold" style={{ fontFamily: `${translationFont}, Noto Sans Arabic, Noto Sans, sans-serif`, color: translationColor, fontSize: translationSize }}><span className="rounded px-1" style={{ color: translationActiveColor, background: translationActiveBg }}>Translation</span> preview</span></Movable>}
+            </div>
+          </div>
+          <div className="grid gap-2 p-4 sm:grid-cols-2"><Button variant="gold" size="lg" disabled={!!busy} onClick={() => save("queued")}>إنشاء الفيديو</Button><Button variant="glass" disabled={!!busy} onClick={() => save("draft")}>حفظ كمسودة</Button><p className="text-center text-[11px] text-muted-foreground sm:col-span-2">التوليد الفعلي يُفعَّل في المرحلة 2 عند ربط النماذج</p></div>
+        </div>
+
+        <div className="min-w-0 space-y-3">
           <Card n="1" t="عنوان المشروع ومقاس الفيديو">
             <Input dir="auto" value={title} onChange={(e) => setTitle(e.target.value)} placeholder="مثال: تقديم قناتي / Channel intro" />
-            <div className="mt-4 space-y-3">
-              {platforms.map((p) => (
-                <div key={p}>
-                  <div className="mb-1.5 text-xs text-muted-foreground">{p}</div>
-                  <div className="flex flex-wrap gap-2">
-                    {SOCIAL_SIZES.filter((s) => s.platform === p).map((s) => (
-                      <button key={s.id} type="button" onClick={() => setSizeId(s.id)} className={`rounded-xl px-3 py-1.5 text-xs transition ${sizeId === s.id ? "bg-secondary text-gold ring-1 ring-primary" : "bg-muted/50 text-muted-foreground"}`}>
-                        {s.label} <span dir="ltr" className="opacity-70">{s.ratio !== "custom" ? s.ratio : ""}</span>
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              ))}
-              {sizeId === "custom" && <div className="grid grid-cols-2 gap-2"><label className="text-xs">العرض<Input type="number" value={customW} onChange={(e) => setCustomW(+e.target.value || 1)} /></label><label className="text-xs">الارتفاع<Input type="number" value={customH} onChange={(e) => setCustomH(+e.target.value || 1)} /></label></div>}
-              <p className="text-xs text-gold-soft" dir="ltr">{w} × {h}</p>
-            </div>
+            <p className="mt-2 text-xs text-muted-foreground">المقاس: {sel.platform} · {sel.label} <span dir="ltr">({w} × {h})</span></p>
           </Card>
 
           <Card n="2" t="صورتك">
@@ -231,7 +243,7 @@ function Studio() {
             {voiceMode === "tts" ? (
               <>
                 {voiceProfiles.length > 0 && <Select label="الصوت الثابت المحفوظ" value={voiceProfileId} onChange={setVoiceProfileId} options={[{ id: "", l: "بدون صوت محفوظ" }, ...voiceProfiles.map((p) => ({ id: p.id, l: p.name }))]} />}
-                <Select label="نموذج الصوت" value={voiceModel} onChange={setVoiceModel} options={modelsFor("tts").map((m) => ({ id: m.id, l: m.name }))} />
+                <Select label={showModelNames ? "نموذج الصوت" : "محرك الصوت"} value={voiceModel} onChange={setVoiceModel} options={modelsFor("tts").map((m, index) => ({ id: m.id, l: showModelNames ? m.name : `محرك الصوت ${index + 1}` }))} />
                 <div className="mt-4 rounded-xl bg-muted/40 p-3">
                   <div className="grid grid-cols-2 gap-3 text-xs text-muted-foreground">
                     <label>السرعة: {rate}<input type="range" min={0.6} max={1.5} step={0.1} value={rate} onChange={(e) => setRate(+e.target.value)} className="w-full accent-[var(--gold)]" /></label>
@@ -248,7 +260,7 @@ function Studio() {
                 <Button variant="glass" onClick={() => audIn.current?.click()}><Paperclip /> {audioId ? "تم إضافة الصوت ✓" : "اختر ملف صوتي"}</Button>
               </div>
             )}
-            <Select label="نموذج تحريك الوجه" value={avatarModel} onChange={setAvatarModel} options={modelsFor("avatar").map((m) => ({ id: m.id, l: m.name }))} />
+            <Select label={showModelNames ? "نموذج تحريك الوجه" : "محرك تحريك الوجه"} value={avatarModel} onChange={setAvatarModel} options={modelsFor("avatar").map((m, index) => ({ id: m.id, l: showModelNames ? m.name : `محرك التحريك ${index + 1}` }))} />
           </Card>
 
           <Card n="4" t="النص المنطوق على الشاشة والترجمة">
@@ -258,6 +270,7 @@ function Studio() {
                 <FontSelect label="الخط" value={font} onChange={setFont} fonts={FONTS} />
                 <ColorPicker label="لون النص" value={color} onChange={setColor} />
                 <ColorPicker label="لون الكلمة المنطوقة الآن" value={activeColor} onChange={setActiveColor} />
+                <ColorPicker label="خلفية الكلمة المنطوقة الآن" value={activeBg} onChange={setActiveBg} />
                 <div className="grid gap-4 sm:grid-cols-2">
                   <label className="text-xs text-muted-foreground">حجم النص: {size}<input type="range" min={14} max={40} value={size} onChange={(e) => setSize(+e.target.value)} className="w-full accent-[var(--gold)]" /></label>
                   <label className="text-xs text-muted-foreground">حجم الكلمة الحالية: {activeSize}<input type="range" min={16} max={52} value={activeSize} onChange={(e) => setActiveSize(+e.target.value)} className="w-full accent-[var(--gold)]" /></label>
@@ -272,6 +285,7 @@ function Studio() {
                 <FontSelect label="خط الترجمة" value={translationFont} onChange={setTranslationFont} fonts={FONTS} />
                 <ColorPicker label="لون الترجمة" value={translationColor} onChange={setTranslationColor} />
                 <ColorPicker label="لون الكلمة المترجمة الحالية" value={translationActiveColor} onChange={setTranslationActiveColor} />
+                <ColorPicker label="خلفية الكلمة المترجمة الحالية" value={translationActiveBg} onChange={setTranslationActiveBg} />
                 <label className="block text-xs text-muted-foreground">حجم الترجمة: {translationSize}<input type="range" min={14} max={40} value={translationSize} onChange={(e) => setTranslationSize(+e.target.value)} className="w-full accent-[var(--gold)]" /></label>
               </div>
             )}
@@ -295,32 +309,6 @@ function Studio() {
             <div className="flex flex-wrap gap-2"><Button variant="glass" onClick={() => extraIn.current?.click()}><Paperclip /> رفع فيديو / صوت / مستند</Button><CameraCapture label="تصوير فيديو" onSave={(f) => upload(f, null)} /></div>
           </Card>
         </div>
-
-        <div className="lg:sticky lg:top-8 lg:self-start">
-          <div className="glass overflow-hidden rounded-3xl">
-            <div className="flex justify-center bg-muted/40 p-3">
-              <div className="relative w-full overflow-hidden rounded-xl bg-secondary" style={{ aspectRatio: `${w} / ${h}`, maxHeight: "60vh", maxWidth: `calc(60vh * ${w / h})` }}>
-                {backgroundUrl && <img src={backgroundUrl} alt="الخلفية" className="absolute inset-0 size-full object-cover" />}
-                {imageUrl ? <img src={imageUrl} alt="الأفاتار" className={`relative size-full ${backgroundUrl ? "object-contain object-bottom" : "object-cover"}`} /> : <div className="grid size-full place-items-center text-sm text-muted-foreground">معاينة الفيديو</div>}
-                {videoTitle && <div className="absolute inset-x-3 top-4 text-center"><span dir="auto" className="bilingual-text inline-block max-w-full rounded-lg bg-black/50 px-3 py-1 text-lg font-bold" style={{ fontFamily: `${titleFont}, Noto Sans Arabic, Noto Sans, sans-serif`, color: titleColor }}>{videoTitle}</span></div>}
-                {logoUrl && <img src={logoUrl} alt="الشعار" className="absolute start-3 top-3 size-12 object-contain" />}
-                {extraText && <div className="absolute inset-x-3 top-1/2 text-center"><span dir="auto" className="bilingual-text inline-block max-w-full rounded-lg bg-black/50 px-3 py-1 text-sm" style={{ fontFamily: `${titleFont}, Noto Sans Arabic, Noto Sans, sans-serif`, color: titleColor }}><Type className="me-1 inline size-3" />{extraText}</span></div>}
-                {subs && (
-                  <div className="absolute inset-x-3 bottom-4 text-center">
-                    <span dir="auto" lang={scriptLanguage === "auto" ? undefined : scriptLanguage} className="bilingual-text inline-block max-w-full rounded-lg px-3 py-1.5 font-bold leading-relaxed" style={{ fontFamily: `${font}, Noto Sans Arabic, Noto Sans, sans-serif`, color, background: bg, fontSize: size }}>{sample.split(/(\s+)/).map((word, index) => <span key={`${word}-${index}`} style={index === 0 ? { color: activeColor, fontSize: activeSize } : undefined}>{word}</span>)}</span>
-                    {translateTo && <span dir={translateTo === "en" ? "ltr" : "auto"} lang={translateTo} className="bilingual-text mt-2 block font-bold" style={{ fontFamily: `${translationFont}, Noto Sans Arabic, Noto Sans, sans-serif`, color: translationColor, fontSize: translationSize }}><span style={{ color: translationActiveColor }}>Translation</span> preview</span>}
-                  </div>
-                )}
-              </div>
-            </div>
-            <div className="space-y-2 p-4">
-              <p className="text-center text-xs text-gold-soft">{sel.platform} · {sel.label}</p>
-              <Button variant="gold" className="w-full" size="lg" disabled={!!busy} onClick={() => save("queued")}>إنشاء الفيديو</Button>
-              <Button variant="glass" className="w-full" disabled={!!busy} onClick={() => save("draft")}>حفظ كمسودة</Button>
-              <p className="text-center text-[11px] text-muted-foreground">التوليد الفعلي يُفعَّل في المرحلة 2 عند ربط النماذج</p>
-            </div>
-          </div>
-        </div>
       </div>
     </div>
   );
@@ -328,11 +316,21 @@ function Studio() {
 
 function Card({ n, t, children }: { n: string; t: string; children: React.ReactNode }) {
   return (
-    <section className="glass rounded-2xl p-4 sm:p-5">
-      <h2 className="mb-4 flex items-center gap-2 font-bold"><span className="grid size-7 place-items-center rounded-full bg-gold-gradient text-sm text-primary-foreground">{n}</span>{t}</h2>
-      {children}
-    </section>
+    <details className="glass group rounded-2xl" open={n === "1"}>
+      <summary className="flex cursor-pointer list-none items-center gap-2 p-4 font-bold sm:p-5"><span className="grid size-7 place-items-center rounded-full bg-gold-gradient text-sm text-primary-foreground">{n}</span><span className="flex-1">{t}</span><span className="text-muted-foreground transition group-open:rotate-180">⌄</span></summary>
+      <div className="border-t border-border p-4 sm:p-5">{children}</div>
+    </details>
   );
+}
+
+function Movable({ label, pos, onChange, children }: { label: string; pos: OverlayPosition; onChange: (p: OverlayPosition) => void; children: React.ReactNode }) {
+  return <div role="button" tabIndex={0} aria-label={`حرّك ${label}`} title={`اسحب لتحريك ${label}`} className="absolute z-20 max-w-[90%] cursor-move select-none text-center outline-none ring-primary focus-visible:ring-2" style={{ left: `${pos.x * 100}%`, top: `${pos.y * 100}%`, transform: "translate(-50%, -50%)", touchAction: "none" }} onPointerDown={(e) => e.currentTarget.setPointerCapture(e.pointerId)} onPointerMove={(e) => {
+    if (!e.currentTarget.hasPointerCapture(e.pointerId)) return;
+    const parent = e.currentTarget.parentElement;
+    if (!parent) return;
+    const r = parent.getBoundingClientRect();
+    onChange({ x: Math.min(0.94, Math.max(0.06, (e.clientX - r.left) / r.width)), y: Math.min(0.94, Math.max(0.06, (e.clientY - r.top) / r.height)) });
+  }}>{children}</div>;
 }
 
 function Seg({ active, onClick, children }: { active: boolean; onClick: () => void; children: React.ReactNode }) {
