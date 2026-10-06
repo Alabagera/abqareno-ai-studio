@@ -112,6 +112,8 @@ function Studio() {
   const { data: avatarProfiles = [] } = useQuery({ queryKey: ["avatar-profiles"], queryFn: async () => (await supabase.from("avatar_profiles").select("*").eq("status", "ready").order("created_at", { ascending: false })).data ?? [] });
   const { data: voiceProfiles = [] } = useQuery({ queryKey: ["voice-profiles"], queryFn: async () => (await supabase.from("voice_profiles").select("*").eq("status", "ready").order("created_at", { ascending: false })).data ?? [] });
   const { data: usage } = useQuery({ queryKey: ["my-usage"], queryFn: async () => (await supabase.rpc("my_usage")).data as { max_videos: number | null; max_minutes_per_video: number | null; used: number } | null });
+  const { data: access } = useQuery({ queryKey: ["workspace-access"], queryFn: async () => (await supabase.rpc("my_workspace_access")).data as Record<string, boolean> | null });
+  const showModelNames = access?.["show_model_names"] === true;
 
   useEffect(() => { const s = sessionStorage.getItem("studio-script"); if (s) { setScript(s); sessionStorage.removeItem("studio-script"); } }, []);
   useEffect(() => { [font, titleFont, translationFont].forEach(loadFont); }, [font, titleFont, translationFont]);
@@ -241,7 +243,7 @@ function Studio() {
             {voiceMode === "tts" ? (
               <>
                 {voiceProfiles.length > 0 && <Select label="الصوت الثابت المحفوظ" value={voiceProfileId} onChange={setVoiceProfileId} options={[{ id: "", l: "بدون صوت محفوظ" }, ...voiceProfiles.map((p) => ({ id: p.id, l: p.name }))]} />}
-                <Select label="نموذج الصوت" value={voiceModel} onChange={setVoiceModel} options={modelsFor("tts").map((m) => ({ id: m.id, l: m.name }))} />
+                <Select label={showModelNames ? "نموذج الصوت" : "محرك الصوت"} value={voiceModel} onChange={setVoiceModel} options={modelsFor("tts").map((m, index) => ({ id: m.id, l: showModelNames ? m.name : `محرك الصوت ${index + 1}` }))} />
                 <div className="mt-4 rounded-xl bg-muted/40 p-3">
                   <div className="grid grid-cols-2 gap-3 text-xs text-muted-foreground">
                     <label>السرعة: {rate}<input type="range" min={0.6} max={1.5} step={0.1} value={rate} onChange={(e) => setRate(+e.target.value)} className="w-full accent-[var(--gold)]" /></label>
@@ -258,7 +260,7 @@ function Studio() {
                 <Button variant="glass" onClick={() => audIn.current?.click()}><Paperclip /> {audioId ? "تم إضافة الصوت ✓" : "اختر ملف صوتي"}</Button>
               </div>
             )}
-            <Select label="نموذج تحريك الوجه" value={avatarModel} onChange={setAvatarModel} options={modelsFor("avatar").map((m) => ({ id: m.id, l: m.name }))} />
+            <Select label={showModelNames ? "نموذج تحريك الوجه" : "محرك تحريك الوجه"} value={avatarModel} onChange={setAvatarModel} options={modelsFor("avatar").map((m, index) => ({ id: m.id, l: showModelNames ? m.name : `محرك التحريك ${index + 1}` }))} />
           </Card>
 
           <Card n="4" t="النص المنطوق على الشاشة والترجمة">
