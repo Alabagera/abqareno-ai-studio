@@ -66,7 +66,11 @@ export const Route = createFileRoute("/api/assistant")({
       if (!signedUrl) continue;
       if (asset.mime_type?.startsWith("image/")) latestContent.push({ type: "input_image", image_url: signedUrl });
       else if (asset.mime_type === "application/pdf") latestContent.push({ type: "input_file", filename: asset.name, file_url: signedUrl });
-      else latestContent.push({ type: "input_text", text: `مرفق محفوظ في المكتبة: ${asset.name} (${asset.mime_type ?? "نوع غير معروف"}). أخبر المستخدم بوضوح إن كان محتواه غير قابل للقراءة مباشرة.` });
+      else if (asset.mime_type?.startsWith("text/") || /\.(txt|md|csv|json|js|jsx|ts|tsx|py|html|css|srt|vtt)$/i.test(asset.name)) {
+        const fileResponse = await fetch(signedUrl);
+        const fileText = fileResponse.ok ? (await fileResponse.text()).slice(0, 80000) : "";
+        latestContent.push({ type: "input_text", text: `\n--- محتوى الملف ${asset.name} ---\n${fileText}\n--- نهاية الملف ---` });
+      } else latestContent.push({ type: "input_text", text: `مرفق محفوظ في المكتبة: ${asset.name} (${asset.mime_type ?? "نوع غير معروف"}). أخبر المستخدم بوضوح إن كان محتواه غير قابل للقراءة مباشرة.` });
     }
     input.push({ role: "user", content: latestContent });
 
