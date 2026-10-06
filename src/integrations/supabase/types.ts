@@ -121,6 +121,8 @@ export type Database = {
           display_name: string | null
           email: string
           id: string
+          max_minutes_per_video: number | null
+          max_videos: number | null
           member_id: string | null
           owner_id: string
           permissions: Json
@@ -133,6 +135,8 @@ export type Database = {
           display_name?: string | null
           email: string
           id?: string
+          max_minutes_per_video?: number | null
+          max_videos?: number | null
           member_id?: string | null
           owner_id: string
           permissions?: Json
@@ -145,6 +149,8 @@ export type Database = {
           display_name?: string | null
           email?: string
           id?: string
+          max_minutes_per_video?: number | null
+          max_videos?: number | null
           member_id?: string | null
           owner_id?: string
           permissions?: Json
@@ -177,17 +183,21 @@ export type Database = {
       }
       video_projects: {
         Row: {
+          aspect_ratio: string
           audio_asset_id: string | null
           avatar_asset_id: string | null
           avatar_model: string
           avatar_profile_id: string | null
           background_asset_id: string | null
           created_at: string
+          created_by: string | null
+          duration_minutes: number | null
           id: string
           language: string
           logo_asset_id: string | null
           logo_style: Json
           output_path: string | null
+          platform: string | null
           script_text: string | null
           status: string
           subtitle_style: Json
@@ -203,17 +213,21 @@ export type Database = {
           voice_profile_id: string | null
         }
         Insert: {
+          aspect_ratio?: string
           audio_asset_id?: string | null
           avatar_asset_id?: string | null
           avatar_model?: string
           avatar_profile_id?: string | null
           background_asset_id?: string | null
           created_at?: string
+          created_by?: string | null
+          duration_minutes?: number | null
           id?: string
           language?: string
           logo_asset_id?: string | null
           logo_style?: Json
           output_path?: string | null
+          platform?: string | null
           script_text?: string | null
           status?: string
           subtitle_style?: Json
@@ -229,17 +243,21 @@ export type Database = {
           voice_profile_id?: string | null
         }
         Update: {
+          aspect_ratio?: string
           audio_asset_id?: string | null
           avatar_asset_id?: string | null
           avatar_model?: string
           avatar_profile_id?: string | null
           background_asset_id?: string | null
           created_at?: string
+          created_by?: string | null
+          duration_minutes?: number | null
           id?: string
           language?: string
           logo_asset_id?: string | null
           logo_style?: Json
           output_path?: string | null
+          platform?: string | null
           script_text?: string | null
           status?: string
           subtitle_style?: Json
@@ -359,6 +377,7 @@ export type Database = {
         }
         Returns: boolean
       }
+      my_usage: { Args: never; Returns: Json }
       workspace_owner_id: { Args: { _user_id: string }; Returns: string }
     }
     Enums: {

@@ -10,6 +10,8 @@ const memberSchema = z.object({
   studio: z.boolean(),
   library: z.boolean(),
   team: z.boolean(),
+  maxVideos: z.number().int().min(0).nullable(),
+  maxMinutes: z.number().min(0).nullable(),
 });
 
 export const createTeamMember = createServerFn({ method: "POST" })
@@ -47,6 +49,8 @@ export const createTeamMember = createServerFn({ method: "POST" })
       role: data.role,
       permissions: { studio: data.studio, library: data.library, team: data.team },
       status: "active",
+      max_videos: data.maxVideos,
+      max_minutes_per_video: data.maxMinutes,
     }, { onConflict: "owner_id,email" });
     if (memberError) throw new Error(memberError.message);
 
