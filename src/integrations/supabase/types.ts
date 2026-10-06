@@ -14,7 +14,111 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      media_assets: {
+        Row: {
+          created_at: string
+          id: string
+          kind: string
+          mime_type: string | null
+          name: string
+          size_bytes: number | null
+          storage_path: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          kind: string
+          mime_type?: string | null
+          name: string
+          size_bytes?: number | null
+          storage_path: string
+          user_id?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          kind?: string
+          mime_type?: string | null
+          name?: string
+          size_bytes?: number | null
+          storage_path?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      video_projects: {
+        Row: {
+          audio_asset_id: string | null
+          avatar_asset_id: string | null
+          avatar_model: string
+          created_at: string
+          id: string
+          language: string
+          output_path: string | null
+          script_text: string | null
+          status: string
+          subtitle_style: Json
+          subtitles_enabled: boolean
+          title: string
+          translate_to: string | null
+          updated_at: string
+          user_id: string
+          voice_model: string
+        }
+        Insert: {
+          audio_asset_id?: string | null
+          avatar_asset_id?: string | null
+          avatar_model?: string
+          created_at?: string
+          id?: string
+          language?: string
+          output_path?: string | null
+          script_text?: string | null
+          status?: string
+          subtitle_style?: Json
+          subtitles_enabled?: boolean
+          title: string
+          translate_to?: string | null
+          updated_at?: string
+          user_id?: string
+          voice_model?: string
+        }
+        Update: {
+          audio_asset_id?: string | null
+          avatar_asset_id?: string | null
+          avatar_model?: string
+          created_at?: string
+          id?: string
+          language?: string
+          output_path?: string | null
+          script_text?: string | null
+          status?: string
+          subtitle_style?: Json
+          subtitles_enabled?: boolean
+          title?: string
+          translate_to?: string | null
+          updated_at?: string
+          user_id?: string
+          voice_model?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "video_projects_audio_asset_id_fkey"
+            columns: ["audio_asset_id"]
+            isOneToOne: false
+            referencedRelation: "media_assets"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "video_projects_avatar_asset_id_fkey"
+            columns: ["avatar_asset_id"]
+            isOneToOne: false
+            referencedRelation: "media_assets"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never
