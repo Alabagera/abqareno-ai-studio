@@ -14,3 +14,9 @@
 - [x] Light/dark mode and mobile polish.
 - [x] AI writing assistant.
 - [x] Improve Arabic and English direction, typography, captions, and studio language controls.
+- [ ] Move studio preview first; add compact size selector and collapsible sections.
+- [ ] Add draggable title, text, caption, and translation positions with active-word background styling.
+- [ ] Extend member permissions for model visibility and model-name hiding.
+- [ ] Strengthen voice restoration controls and add Arabic dialect voice metadata.
+- [ ] Fix password recovery and restrict account creation to the main admin.
+- [ ] Add the strongest practical open-source assistant model path with Arabic and English support.
