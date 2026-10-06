@@ -20,3 +20,4 @@
 - [x] Strengthen voice restoration controls and add Arabic dialect voice metadata.
 - [x] Fix password recovery and restrict account creation to the main admin.
 - [x] Add a self-hosted Qwen assistant model path with Arabic and English support.
+- [x] Phase 2 step 1: owner can link each open-source model to a self-hosted server (URL + test).
