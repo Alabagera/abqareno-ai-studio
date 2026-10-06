@@ -13,3 +13,4 @@
 - AI models are listed in `src/lib/ai/registry.ts`; UI reads only from it so models can be swapped without UI rewrites.
 - User files go to the private `media` storage bucket under `<user_id>/<kind>/` and are indexed in `media_assets`; video jobs live in `video_projects`.
 - Protected pages live under `src/routes/_authenticated/` (client-side auth gate, ssr disabled) because the session is browser-stored.
+- Workspace sharing is owner-based: member assets and projects resolve through `workspace_owner_id`, while privileged account management stays in authenticated server functions.
