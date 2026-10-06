@@ -10,6 +10,8 @@ const memberSchema = z.object({
   studio: z.boolean(),
   library: z.boolean(),
   team: z.boolean(),
+  models: z.boolean(),
+  showModelNames: z.boolean(),
   maxVideos: z.number().int().min(0).nullable(),
   maxMinutes: z.number().min(0).nullable(),
 });
@@ -47,7 +49,7 @@ export const createTeamMember = createServerFn({ method: "POST" })
       email: data.email.toLowerCase(),
       display_name: data.displayName,
       role: data.role,
-      permissions: { studio: data.studio, library: data.library, team: data.team },
+      permissions: { studio: data.studio, library: data.library, team: data.team, models: data.models, show_model_names: data.showModelNames },
       status: "active",
       max_videos: data.maxVideos,
       max_minutes_per_video: data.maxMinutes,

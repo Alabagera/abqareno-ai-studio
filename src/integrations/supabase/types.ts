@@ -378,6 +378,7 @@ export type Database = {
         Returns: boolean
       }
       my_usage: { Args: never; Returns: Json }
+      my_workspace_access: { Args: never; Returns: Json }
       workspace_owner_id: { Args: { _user_id: string }; Returns: string }
     }
     Enums: {
