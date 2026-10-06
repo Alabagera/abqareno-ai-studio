@@ -5,4 +5,4 @@
 - [x] Build team account management page.
 - [x] Build avatar and voice profile page.
 - [x] Extend the studio with reusable profiles, background, logo, titles, and spoken/translation styles.
-- [ ] Verify the authenticated mobile flow and current build.
+- [x] Verify the authenticated mobile flow and current build.
