@@ -51,7 +51,7 @@ function ProfilesPage() {
     if (!files?.length) return;
     setBusy(true);
     try {
-      const uploaded = [];
+      const uploaded: Awaited<ReturnType<typeof uploadMedia>>[] = [];
       for (const file of Array.from(files)) uploaded.push(await uploadMedia(file, kind));
       if (kind === "image") setAvatarAssets((old) => [...old, ...uploaded.map((a) => a.id)]);
       else setVoiceAssets((old) => [...old, ...uploaded.map((a) => a.id)]);
@@ -62,22 +62,30 @@ function ProfilesPage() {
   }
 
   async function saveAvatar() {
-    if (!avatarName.trim() || avatarAssets.length < 3) return toast.error("اكتب اسمًا وارفع 3 صور على الأقل من زوايا مختلفة");
+    const coverAssetId = avatarAssets[0];
+    if (!avatarName.trim() || avatarAssets.length < 3 || !coverAssetId) {
+      toast.error("اكتب اسمًا وارفع 3 صور على الأقل من زوايا مختلفة");
+      return;
+    }
     const { error } = await supabase.from("avatar_profiles").insert({
-      name: avatarName.trim(), image_asset_ids: avatarAssets, cover_asset_id: avatarAssets[0], status: "ready",
+      name: avatarName.trim(), image_asset_ids: avatarAssets, cover_asset_id: coverAssetId, status: "ready",
     });
-    if (error) return toast.error(error.message);
+    if (error) { toast.error(error.message); return; }
     setAvatarName(""); setAvatarAssets([]); await qc.invalidateQueries({ queryKey: ["avatar-profiles"] });
     toast.success("تم حفظ الأفاتار");
   }
 
   async function saveVoice() {
-    if (!voiceName.trim() || voiceAssets.length === 0) return toast.error("اكتب اسمًا وارفع تسجيلاً صوتيًا واضحًا");
+    const primarySampleId = voiceAssets[0];
+    if (!voiceName.trim() || !primarySampleId) {
+      toast.error("اكتب اسمًا وارفع تسجيلاً صوتيًا واضحًا");
+      return;
+    }
     const { error } = await supabase.from("voice_profiles").insert({
-      name: voiceName.trim(), sample_asset_ids: voiceAssets, primary_sample_asset_id: voiceAssets[0], status: "ready",
+      name: voiceName.trim(), sample_asset_ids: voiceAssets, primary_sample_asset_id: primarySampleId, status: "ready",
       enhancement: { clarity: 100, noise_reduction: 100, studio_quality: true },
     });
-    if (error) return toast.error(error.message);
+    if (error) { toast.error(error.message); return; }
     setVoiceName(""); setVoiceAssets([]); await qc.invalidateQueries({ queryKey: ["voice-profiles"] });
     toast.success("تم حفظ الصوت الاستوديو");
   }
