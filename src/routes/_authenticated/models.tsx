@@ -87,6 +87,15 @@ function EndpointEditor({ model, ep }: { model: AiModel; ep: Endpoint | undefine
       <div className="mt-3 space-y-2">
         <Input dir="ltr" value={url} onChange={(e) => setUrl(e.target.value)} placeholder="https://xxxx.trycloudflare.com" />
         <p className="text-[11px] text-muted-foreground" dir="ltr">Local: {model.defaultUrl}</p>
+        {model.setup && (
+          <div className="rounded-lg bg-background/60 p-2">
+            <p className="text-[11px] text-muted-foreground">أمر التثبيت:</p>
+            <div className="flex items-center gap-2">
+              <code dir="ltr" className="flex-1 overflow-x-auto whitespace-nowrap text-[11px]">{model.setup}</code>
+              <button type="button" className="shrink-0 text-[11px] text-gold-soft underline" onClick={() => { navigator.clipboard.writeText(model.setup!); toast.success("تم النسخ"); }}>نسخ</button>
+            </div>
+          </div>
+        )}
         <Input dir="ltr" type="password" value={token} onChange={(e) => setToken(e.target.value)} placeholder="رمز حماية اختياري" />
         <label className="flex items-center gap-2 text-xs"><input type="checkbox" checked={enabled} onChange={(e) => setEnabled(e.target.checked)} />تفعيل هذا النموذج</label>
         {ep?.last_status && <p className="text-[11px] text-muted-foreground">آخر فحص: {ep.last_status}</p>}
@@ -102,16 +111,31 @@ function EndpointEditor({ model, ep }: { model: AiModel; ep: Endpoint | undefine
 
 function SetupGuide() {
   return (
-    <details className="glass mb-6 rounded-2xl p-4">
-      <summary className="cursor-pointer font-bold text-gold">دليل تشغيل النماذج على جهازك مجانًا</summary>
-      <ol className="mt-3 list-decimal space-y-2 ps-5 text-sm leading-7 text-muted-foreground">
-        <li>ثبّت تعريف كرت NVIDIA وبرنامج <span dir="ltr">Python 3.10</span> وبرنامج Git.</li>
-        <li>لكل نموذج اضغط «طريقة التثبيت» واتبع التعليمات؛ سيعمل على العنوان المحلي المكتوب تحته.</li>
-        <li>للمساعد: ثبّت Ollama ثم شغّل <code dir="ltr">ollama run qwen3:8b</code>.</li>
-        <li>ثبّت Cloudflare Tunnel وشغّل <code dir="ltr">cloudflared tunnel --url http://localhost:8020</code> لكل نموذج، فيعطيك رابط https.</li>
-        <li>الصق الرابط في بطاقة النموذج، فعّله، ثم اضغط «اختبار الاتصال».</li>
-        <li>يجب أن يبقى الجهاز والنفق شغالين أثناء استخدام الموقع.</li>
-      </ol>
+    <details className="glass mb-6 rounded-2xl p-4" open>
+      <summary className="cursor-pointer font-bold text-gold">كيف أربط النماذج بنفسي؟ (خطوات سهلة)</summary>
+      <div className="mt-3 grid gap-4 md:grid-cols-2 text-sm leading-7 text-muted-foreground">
+        <div className="rounded-xl bg-secondary/50 p-3">
+          <h3 className="mb-1 font-bold text-foreground">على سيرفرك الخاص (الأفضل — يعمل دائمًا)</h3>
+          <ol className="list-decimal space-y-1 ps-5">
+            <li>ادخل إلى السيرفر وثبّت Docker بالأمر: <code dir="ltr">curl -fsSL https://get.docker.com | sh</code></li>
+            <li>إن كان فيه كرت NVIDIA ثبّت «NVIDIA Container Toolkit».</li>
+            <li>انسخ «أمر التثبيت» الظاهر في بطاقة النموذج والصقه في السيرفر.</li>
+            <li>اربط نطاقًا فرعيًا لكل نموذج، مثل <span dir="ltr">image.yourdomain.com</span>، عبر Cloudflare Tunnel أو Nginx مع شهادة https.</li>
+            <li>الصق الرابط في البطاقة ← فعّل ← «اختبار الاتصال».</li>
+          </ol>
+        </div>
+        <div className="rounded-xl bg-secondary/50 p-3">
+          <h3 className="mb-1 font-bold text-foreground">على جهاز الكمبيوتر</h3>
+          <ol className="list-decimal space-y-1 ps-5">
+            <li>ثبّت Docker Desktop، ولنماذج المحادثة ثبّت Ollama من ollama.com.</li>
+            <li>انسخ «أمر التثبيت» من البطاقة والصقه في الطرفية (Terminal).</li>
+            <li>ثبّت cloudflared وشغّل: <code dir="ltr">cloudflared tunnel --url http://localhost:PORT</code> (ضع رقم المنفذ المكتوب تحت البطاقة).</li>
+            <li>الصق رابط https الناتج في البطاقة واضغط «اختبار الاتصال».</li>
+            <li>يجب أن يبقى الجهاز شغالًا أثناء الاستخدام.</li>
+          </ol>
+        </div>
+      </div>
+      <p className="mt-3 text-xs text-muted-foreground">«بدون GPU» = يعمل على أي سيرفر عادي. الأرقام مثل 8GB = ذاكرة كرت الشاشة المطلوبة. أضف «رمز حماية» حتى لا يستخدم أحد سيرفرك.</p>
     </details>
   );
 }
