@@ -1,5 +1,5 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { Mic, ImageIcon, Video, Languages, Captions, Cpu } from "lucide-react";
+import { Mic, ImageIcon, Video, Languages, Captions, Cpu, PenLine, Wand2, FileText, Presentation, Code2, GraduationCap, AudioLines, Briefcase, ScanText } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Logo } from "@/components/Logo";
 import { AlabageraPortrait } from "@/components/AlabageraPortrait";
@@ -25,6 +25,21 @@ const features = [
   { icon: Captions, t: "ترجمة نصية", d: "خطوط منسقة وألوان جميلة" },
   { icon: Languages, t: "ترجمة لغات", d: "انشر محتواك لكل العالم" },
   { icon: Cpu, t: "نماذج مفتوحة", d: "بدّل النموذج دون إعادة البناء" },
+];
+
+const capabilities = [
+  { icon: PenLine, t: "كاتب محترف", d: "سكربتات وإعلانات ومقالات وخطط تسويق جاهزة خلال ثوانٍ." },
+  { icon: Briefcase, t: "مستشار أعمال", d: "خطط عمل، تحليل منافسين، حسابات وتقارير دقيقة." },
+  { icon: ImageIcon, t: "مصمم صور", d: "صور إعلانية واقعية وبوسترات بكتابة عربية واضحة من وصف بسيط." },
+  { icon: Wand2, t: "محرر صور سحري", d: "غيّر الخلفية، أزل العناصر، ورفع دقة الصور القديمة بكلمات." },
+  { icon: FileText, t: "خبير مستندات", d: "حوّل بين PDF وWord وExcel، ادمج وضغط ولخّص ملفاتك." },
+  { icon: Presentation, t: "صانع عروض", d: "عرض تقديمي كامل بالتصميم من موضوع واحد فقط." },
+  { icon: Code2, t: "مبرمج خبير", d: "مواقع وتطبيقات وألعاب كاملة من وصف نصي." },
+  { icon: GraduationCap, t: "مصمم كورسات", d: "مناهج تدريبية كاملة بالدروس والتمارين والاختبارات." },
+  { icon: Languages, t: "مترجم عالمي", d: "ترجمة احترافية لنصوص طويلة بين أكثر من 200 لغة." },
+  { icon: AudioLines, t: "استوديو صوت", d: "صوتك المستنسخ بجودة بودكاست، مع اللهجات العربية والسودانية." },
+  { icon: ScanText, t: "تفريغ ذكي", d: "حوّل أي تسجيل إلى نص وترجمة متزامنة بدقة الكلمة." },
+  { icon: Video, t: "مخرج فيديو", d: "وجه يتكلم بتزامن الشفاه مع ترجمة ملونة وشعارك." },
 ];
 
 function Index() {
@@ -53,6 +68,15 @@ function Index() {
             <Button asChild variant="glass" size="lg">
               <Link to="/dashboard">لوحة التحكم</Link>
             </Button>
+          </div>
+        </section>
+        <section className="mb-12">
+          <h2 className="mb-2 text-center text-2xl font-bold md:text-3xl">ذكاء اصطناعي واحد… <span className="text-gold-gradient">لكل أعمالك</span></h2>
+          <p className="mb-6 text-center text-muted-foreground">نخبة من أقوى العقول الذكية تعمل لك بالعربية والإنجليزية</p>
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
+            {capabilities.map((c) => (
+              <div key={c.t} className="glass rounded-2xl p-5"><c.icon className="mb-3 size-6 text-gold" /><h3 className="font-bold">{c.t}</h3><p className="mt-1 text-sm text-muted-foreground">{c.d}</p></div>
+            ))}
           </div>
         </section>
         <section className="grid grid-cols-2 gap-3 md:grid-cols-3 md:gap-5">
