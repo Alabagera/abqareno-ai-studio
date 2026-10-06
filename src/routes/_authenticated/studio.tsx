@@ -86,9 +86,9 @@ function Studio() {
   }
 
   async function save(status: "draft" | "queued"): Promise<void> {
-    if (!title.trim()) { toast.error("أدخل عنوانًا للفيديو");
-    if (!imageId) { toast.error("ارفع صورة أولًا");
-    if (voiceMode === "tts" && !script.trim()) { toast.error("أدخل النص");
+    if (!title.trim()) { toast.error("أدخل عنوانًا للفيديو"); return; }
+    if (!imageId) { toast.error("ارفع صورة أولًا"); return; }
+    if (voiceMode === "tts" && !script.trim()) { toast.error("أدخل النص"); return; }
     setBusy(status);
     const { error } = await supabase.from("video_projects").insert({
       title, script_text: script, avatar_asset_id: imageId, audio_asset_id: voiceMode === "upload" ? audioId : null,
@@ -96,7 +96,7 @@ function Studio() {
       subtitle_style: { font, color, bg, size }, translate_to: translateTo || null, status,
     });
     setBusy(null);
-    if (error) { toast.error(error.message);
+    if (error) { toast.error(error.message); return; }
     toast.success(status === "queued" ? "أُضيف إلى قائمة الإنتاج — سيُعالج عند ربط النماذج" : "تم حفظ المسودة");
     qc.invalidateQueries({ queryKey: ["projects"] });
     navigate({ to: "/library" });
