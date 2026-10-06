@@ -40,6 +40,7 @@ const SCRIPT_LANGS = [
   { id: "ar", l: "العربية" },
   { id: "en", l: "English" },
 ];
+const FALLBACK_SOCIAL_SIZE = { id: "custom", platform: "مخصص", label: "مقاس مخصص", ratio: "custom", w: 1080, h: 1080 };
 const LANGS = [
   { id: "", l: "بدون ترجمة" }, { id: "en", l: "الإنجليزية" }, { id: "fr", l: "الفرنسية" }, { id: "tr", l: "التركية" },
   { id: "es", l: "الإسبانية" }, { id: "de", l: "الألمانية" }, { id: "ur", l: "الأردية" }, { id: "id", l: "الإندونيسية" },
@@ -92,8 +93,7 @@ function Studio() {
   const bgIn = useRef<HTMLInputElement>(null);
   const logoIn = useRef<HTMLInputElement>(null);
 
-  const sel = SOCIAL_SIZES.find((s) => s.id === sizeId) ?? SOCIAL_SIZES[0];
-  if (!sel) return null;
+  const sel = SOCIAL_SIZES.find((s) => s.id === sizeId) ?? FALLBACK_SOCIAL_SIZE;
   const w = sel.id === "custom" ? customW : sel.w;
   const h = sel.id === "custom" ? customH : sel.h;
   const minutes = estimateMinutes(script);
