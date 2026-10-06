@@ -57,11 +57,11 @@ const ShimmerComponent = ({
       )}
       initial={{ backgroundPosition: "100% center" }}
       style={
-        {
+        ({
           "--spread": `${dynamicSpread}px`,
           backgroundImage:
             "var(--bg), linear-gradient(var(--color-muted-foreground), var(--color-muted-foreground))",
-        } as CSSProperties
+        } as CSSProperties) as MotionProps["style"]
       }
       transition={{
         duration,
