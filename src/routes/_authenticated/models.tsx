@@ -3,7 +3,7 @@ import { AI_MODELS, TASK_LABELS, type ModelTask } from "@/lib/ai/registry";
 import { PageHeader } from "@/components/PageHeader";
 
 export const Route = createFileRoute("/_authenticated/models")({
-  head: () => ({ meta: [{ title: "نماذج الذكاء الاصطناعي — عبقرينو" }, { name: "description", content: "النماذج مفتوحة المصدر المتاحة للاستوديو." }] }),
+  head: () => ({ meta: [{ title: "نماذج الذكاء الاصطناعي — عبقرينو" }, { name: "description", content: "النماذج مفتوحة المصدر المتاحة للاستوديو." }, { property: "og:title", content: "نماذج عبقرينو AI" }, { property: "og:description", content: "سجل نماذج الصوت وتحريك الوجه والترجمة القابل للتوسعة." }, { property: "og:type", content: "website" }, { name: "twitter:card", content: "summary_large_image" }] }),
   component: Models,
 });
 

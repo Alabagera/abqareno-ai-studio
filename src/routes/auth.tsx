@@ -16,6 +16,8 @@ export const Route = createFileRoute("/auth")({
       { name: "description", content: "سجّل دخولك إلى استوديو عبقرينو." },
       { property: "og:title", content: "تسجيل الدخول — عبقرينو" },
       { property: "og:description", content: "ادخل إلى لوحة تحكم عبقرينو AI Studio." },
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary_large_image" },
     ],
   }),
   component: AuthPage,

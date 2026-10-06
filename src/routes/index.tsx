@@ -10,6 +10,8 @@ export const Route = createFileRoute("/")({
       { name: "description", content: "حوّل صورتك ونصك إلى فيديو متحدث بصوتك، مع ترجمة نصية ملونة وترجمة لغات." },
       { property: "og:title", content: "عبقرينو AI Studio" },
       { property: "og:description", content: "استوديو عربي لإنشاء فيديوهات Talking Avatar بنماذج مفتوحة المصدر." },
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary_large_image" },
     ],
   }),
   component: Index,

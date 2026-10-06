@@ -10,7 +10,7 @@ import { PageHeader, STATUS_LABEL } from "@/components/PageHeader";
 import { Button } from "@/components/ui/button";
 
 export const Route = createFileRoute("/_authenticated/library")({
-  head: () => ({ meta: [{ title: "المكتبة — عبقرينو" }, { name: "description", content: "سجل الفيديوهات وكل ملفاتك المرفوعة." }] }),
+  head: () => ({ meta: [{ title: "المكتبة — عبقرينو" }, { name: "description", content: "سجل الفيديوهات وكل ملفاتك المرفوعة." }, { property: "og:title", content: "مكتبة عبقرينو" }, { property: "og:description", content: "الفيديوهات والصور والصوتيات والمستندات المحفوظة." }, { property: "og:type", content: "website" }, { name: "twitter:card", content: "summary_large_image" }] }),
   component: Library,
 });
 
