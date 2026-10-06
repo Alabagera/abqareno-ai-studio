@@ -14,6 +14,50 @@ export type Database = {
   }
   public: {
     Tables: {
+      avatar_profiles: {
+        Row: {
+          cover_asset_id: string | null
+          created_at: string
+          id: string
+          image_asset_ids: string[]
+          model: string
+          name: string
+          owner_id: string
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          cover_asset_id?: string | null
+          created_at?: string
+          id?: string
+          image_asset_ids?: string[]
+          model?: string
+          name: string
+          owner_id?: string
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          cover_asset_id?: string | null
+          created_at?: string
+          id?: string
+          image_asset_ids?: string[]
+          model?: string
+          name?: string
+          owner_id?: string
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "avatar_profiles_cover_asset_id_fkey"
+            columns: ["cover_asset_id"]
+            isOneToOne: false
+            referencedRelation: "media_assets"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       media_assets: {
         Row: {
           created_at: string
@@ -47,60 +91,168 @@ export type Database = {
         }
         Relationships: []
       }
+      profiles: {
+        Row: {
+          created_at: string
+          display_name: string | null
+          email: string
+          id: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          display_name?: string | null
+          email: string
+          id: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          display_name?: string | null
+          email?: string
+          id?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      team_members: {
+        Row: {
+          created_at: string
+          display_name: string | null
+          email: string
+          id: string
+          member_id: string | null
+          owner_id: string
+          permissions: Json
+          role: Database["public"]["Enums"]["app_role"]
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          display_name?: string | null
+          email: string
+          id?: string
+          member_id?: string | null
+          owner_id: string
+          permissions?: Json
+          role?: Database["public"]["Enums"]["app_role"]
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          display_name?: string | null
+          email?: string
+          id?: string
+          member_id?: string | null
+          owner_id?: string
+          permissions?: Json
+          role?: Database["public"]["Enums"]["app_role"]
+          status?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      user_roles: {
+        Row: {
+          created_at: string
+          id: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          role?: Database["public"]["Enums"]["app_role"]
+          user_id?: string
+        }
+        Relationships: []
+      }
       video_projects: {
         Row: {
           audio_asset_id: string | null
           avatar_asset_id: string | null
           avatar_model: string
+          avatar_profile_id: string | null
+          background_asset_id: string | null
           created_at: string
           id: string
           language: string
+          logo_asset_id: string | null
+          logo_style: Json
           output_path: string | null
           script_text: string | null
           status: string
           subtitle_style: Json
           subtitles_enabled: boolean
+          text_overlays: Json
           title: string
+          title_overlay: Json
           translate_to: string | null
+          translation_style: Json
           updated_at: string
           user_id: string
           voice_model: string
+          voice_profile_id: string | null
         }
         Insert: {
           audio_asset_id?: string | null
           avatar_asset_id?: string | null
           avatar_model?: string
+          avatar_profile_id?: string | null
+          background_asset_id?: string | null
           created_at?: string
           id?: string
           language?: string
+          logo_asset_id?: string | null
+          logo_style?: Json
           output_path?: string | null
           script_text?: string | null
           status?: string
           subtitle_style?: Json
           subtitles_enabled?: boolean
+          text_overlays?: Json
           title: string
+          title_overlay?: Json
           translate_to?: string | null
+          translation_style?: Json
           updated_at?: string
           user_id?: string
           voice_model?: string
+          voice_profile_id?: string | null
         }
         Update: {
           audio_asset_id?: string | null
           avatar_asset_id?: string | null
           avatar_model?: string
+          avatar_profile_id?: string | null
+          background_asset_id?: string | null
           created_at?: string
           id?: string
           language?: string
+          logo_asset_id?: string | null
+          logo_style?: Json
           output_path?: string | null
           script_text?: string | null
           status?: string
           subtitle_style?: Json
           subtitles_enabled?: boolean
+          text_overlays?: Json
           title?: string
+          title_overlay?: Json
           translate_to?: string | null
+          translation_style?: Json
           updated_at?: string
           user_id?: string
           voice_model?: string
+          voice_profile_id?: string | null
         }
         Relationships: [
           {
@@ -117,6 +269,81 @@ export type Database = {
             referencedRelation: "media_assets"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "video_projects_avatar_profile_id_fkey"
+            columns: ["avatar_profile_id"]
+            isOneToOne: false
+            referencedRelation: "avatar_profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "video_projects_background_asset_id_fkey"
+            columns: ["background_asset_id"]
+            isOneToOne: false
+            referencedRelation: "media_assets"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "video_projects_logo_asset_id_fkey"
+            columns: ["logo_asset_id"]
+            isOneToOne: false
+            referencedRelation: "media_assets"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "video_projects_voice_profile_id_fkey"
+            columns: ["voice_profile_id"]
+            isOneToOne: false
+            referencedRelation: "voice_profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      voice_profiles: {
+        Row: {
+          created_at: string
+          enhancement: Json
+          id: string
+          model: string
+          name: string
+          owner_id: string
+          primary_sample_asset_id: string | null
+          sample_asset_ids: string[]
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          enhancement?: Json
+          id?: string
+          model?: string
+          name: string
+          owner_id?: string
+          primary_sample_asset_id?: string | null
+          sample_asset_ids?: string[]
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          enhancement?: Json
+          id?: string
+          model?: string
+          name?: string
+          owner_id?: string
+          primary_sample_asset_id?: string | null
+          sample_asset_ids?: string[]
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "voice_profiles_primary_sample_asset_id_fkey"
+            columns: ["primary_sample_asset_id"]
+            isOneToOne: false
+            referencedRelation: "media_assets"
+            referencedColumns: ["id"]
+          },
         ]
       }
     }
@@ -124,10 +351,18 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      bootstrap_primary_owner: { Args: never; Returns: boolean }
+      has_role: {
+        Args: {
+          _role: Database["public"]["Enums"]["app_role"]
+          _user_id: string
+        }
+        Returns: boolean
+      }
+      workspace_owner_id: { Args: { _user_id: string }; Returns: string }
     }
     Enums: {
-      [_ in never]: never
+      app_role: "owner" | "admin" | "editor" | "viewer"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -254,6 +489,8 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {},
+    Enums: {
+      app_role: ["owner", "admin", "editor", "viewer"],
+    },
   },
 } as const
