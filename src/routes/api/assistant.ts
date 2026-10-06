@@ -1,12 +1,14 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { createClient } from "@supabase/supabase-js";
 import { z } from "zod";
+import { AI_MODELS } from "@/lib/ai/registry";
 
 const bodySchema = z.object({
   threadId: z.string().uuid(),
   content: z.string().trim().min(1).max(50000),
   mode: z.enum(["general", "translate", "code", "course", "documents"]),
   assetIds: z.array(z.string().uuid()).max(8).default([]),
+  modelId: z.string().max(80).default("openai/gpt-6-astra"),
 });
 
 const MODE_SYSTEM = {
@@ -39,7 +41,12 @@ export const Route = createFileRoute("/api/assistant")({
     if (authError || !authData.user) return new Response("يلزم تسجيل الدخول", { status: 401 });
     const parsed = bodySchema.safeParse(await request.json().catch(() => null));
     if (!parsed.success) return new Response("الطلب أو المرفقات غير صالحة", { status: 400 });
-    const { threadId, content, mode, assetIds } = parsed.data;
+    const { threadId, content, mode, assetIds, modelId } = parsed.data;
+    const model = AI_MODELS.find((m) => m.id === modelId && m.task === "chat");
+    if (!model) return new Response("هذا النموذج غير متاح في المساعد", { status: 400 });
+    const { data: access } = await sb.rpc("my_workspace_access");
+    const allowed = (access as Record<string, unknown> | null)?.["allowed_models"];
+    if (Array.isArray(allowed) && !allowed.includes(model.id)) return new Response("ليس لديك صلاحية استخدام هذا النموذج", { status: 403 });
     const { data: thread, error: threadError } = await sb.from("assistant_threads").select("id, title").eq("id", threadId).single();
     if (threadError || !thread) return new Response("المحادثة غير موجودة أو غير مسموحة", { status: 404 });
 
@@ -136,7 +143,7 @@ export const Route = createFileRoute("/api/assistant")({
           }
         },
       });
-      return new Response(upstream.body.pipeThrough(tap), { headers: { "Content-Type": "text/event-stream", "Cache-Control": "no-store" } });
+      return new Response(upstreamBody.pipeThrough(tap), { headers: { "Content-Type": "text/event-stream", "Cache-Control": "no-store" } });
     } catch (error) {
       if (request.signal.aborted) return new Response(null, { status: 499 });
       throw error;
