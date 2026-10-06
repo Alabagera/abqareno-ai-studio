@@ -74,16 +74,45 @@ export const Route = createFileRoute("/api/assistant")({
     }
     input.push({ role: "user", content: latestContent });
 
+    const systemText = `${MODE_SYSTEM[mode]}\nادعم العربية والإنجليزية والنص المختلط. استخدم Markdown للعناوين والقوائم والجداول والأكواد.`;
     try {
-      const upstream = await fetch("https://ai.gateway.lovable.dev/v1/responses", {
-        method: "POST", signal: request.signal,
-        headers: { "Content-Type": "application/json", "Lovable-API-Key": apiKey, "X-Lovable-AIG-SDK": "fetch" },
-        body: JSON.stringify({ model: "openai/gpt-6-astra", input: [{ role: "system", content: `${MODE_SYSTEM[mode]}\nادعم العربية والإنجليزية والنص المختلط. استخدم Markdown للعناوين والقوائم والجداول والأكواد.` }, ...input], stream: true, store: false, reasoning: { effort: "low", summary: "auto" }, include: ["reasoning.encrypted_content"] }),
-      });
-      if (!upstream.ok || !upstream.body) {
-        const raw = await upstream.text();
-        console.error("assistant gateway error", upstream.status, raw.slice(0, 500));
-        return new Response(safeGatewayMessage(upstream.status, raw) || "تعذر الوصول إلى المساعد", { status: upstream.status });
+      let upstreamBody: ReadableStream<Uint8Array>;
+      if (model.status === "ready") {
+        const upstream = await fetch("https://ai.gateway.lovable.dev/v1/responses", {
+          method: "POST", signal: request.signal,
+          headers: { "Content-Type": "application/json", "Lovable-API-Key": apiKey, "X-Lovable-AIG-SDK": "fetch" },
+          body: JSON.stringify({ model: model.id, input: [{ role: "system", content: systemText }, ...input], stream: true, store: false, reasoning: { effort: "low", summary: "auto" }, include: ["reasoning.encrypted_content"] }),
+        });
+        if (!upstream.ok || !upstream.body) {
+          const raw = await upstream.text();
+          console.error("assistant gateway error", upstream.status, raw.slice(0, 500));
+          return new Response(safeGatewayMessage(upstream.status, raw) || "تعذر الوصول إلى المساعد", { status: upstream.status });
+        }
+        upstreamBody = upstream.body;
+      } else {
+        const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+        const { data: ownerId } = await sb.rpc("workspace_owner_id", { _user_id: authData.user.id });
+        const { data: ep } = await supabaseAdmin.from("model_endpoints").select("endpoint_url, access_token, enabled").eq("owner_id", ownerId as string).eq("model_id", model.id).maybeSingle();
+        if (!ep?.enabled || !ep.endpoint_url) return new Response(`النموذج "${model.name}" غير مربوط بسيرفرك بعد. اربطه من صفحة النماذج ثم أعد المحاولة.`, { status: 409 });
+        const attachText = assets.length ? `\n(مرفقات: ${assets.map((a) => a.name).join("، ")})` : "";
+        const messages = [{ role: "system", content: systemText }, ...(history ?? []).slice(0, -1).map((m) => ({ role: m.role, content: m.content })), { role: "user", content: content + attachText }];
+        const remote = await fetch(`${ep.endpoint_url.replace(/\/$/, "")}/v1/chat/completions`, {
+          method: "POST", signal: request.signal,
+          headers: { "Content-Type": "application/json", ...(ep.access_token ? { Authorization: `Bearer ${ep.access_token}` } : {}) },
+          body: JSON.stringify({ model: model.setup?.split(" ").pop() ?? model.id, messages, stream: true }),
+        }).catch(() => null);
+        if (!remote?.ok || !remote.body) return new Response("تعذر الوصول إلى سيرفر النموذج. تأكد أنه يعمل وأن الرابط صحيح.", { status: 502 });
+        const enc = new TextEncoder(); const dec = new TextDecoder(); let buf = "";
+        upstreamBody = remote.body.pipeThrough(new TransformStream<Uint8Array, Uint8Array>({
+          transform(chunk, controller) {
+            buf += dec.decode(chunk, { stream: true }); const lines = buf.split("\n"); buf = lines.pop() ?? "";
+            for (const line of lines) {
+              if (!line.startsWith("data:")) continue;
+              const p = line.slice(5).trim(); if (!p || p === "[DONE]") continue;
+              try { const delta = (JSON.parse(p) as { choices?: Array<{ delta?: { content?: string } }> }).choices?.[0]?.delta?.content; if (delta) controller.enqueue(enc.encode(`data: ${JSON.stringify({ type: "response.output_text.delta", delta })}\n\n`)); } catch { /* partial */ }
+            }
+          },
+        }));
       }
       let answer = "";
       let buffer = "";
