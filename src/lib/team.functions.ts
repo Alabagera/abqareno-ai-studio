@@ -12,14 +12,6 @@ const memberSchema = z.object({
   team: z.boolean(),
 });
 
-async function requireOwner(
-  supabase: Parameters<Parameters<typeof requireSupabaseAuth>["options"]["server"]>[0] extends never ? never : never,
-  userId: string,
-) {
-  void supabase;
-  void userId;
-}
-
 export const createTeamMember = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((input) => memberSchema.parse(input))
