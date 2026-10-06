@@ -37,3 +37,4 @@ export const AI_MODELS: AiModel[] = [
 export const activeModel = (task: ModelTask) => AI_MODELS.find((m) => m.task === task && m.status === "ready");
 
 export const modelsFor = (task: ModelTask) => AI_MODELS.filter((m) => m.task === task);
+export const modelsFor = (task: ModelTask) => AI_MODELS.filter((m) => m.task === task);
