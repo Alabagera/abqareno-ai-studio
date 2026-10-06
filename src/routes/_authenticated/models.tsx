@@ -60,7 +60,7 @@ function Models() {
   );
 }
 
-function EndpointEditor({ model, ep }: { model: AiModel; ep?: Endpoint }) {
+function EndpointEditor({ model, ep }: { model: AiModel; ep: Endpoint | undefined }) {
   const qc = useQueryClient();
   const test = useServerFn(testModelEndpoint);
   const [url, setUrl] = useState(ep?.endpoint_url ?? "");
@@ -72,7 +72,7 @@ function EndpointEditor({ model, ep }: { model: AiModel; ep?: Endpoint }) {
     const { data: u } = await supabase.auth.getUser();
     const { error } = await supabase.from("model_endpoints").upsert({ owner_id: u.user!.id, model_id: model.id, endpoint_url: url.trim(), access_token: token.trim() || null, enabled, updated_at: new Date().toISOString() }, { onConflict: "owner_id,model_id" });
     setBusy(false);
-    if (error) return toast.error(error.message);
+    if (error) { toast.error(error.message); return; }
     toast.success("تم الحفظ");
     qc.invalidateQueries({ queryKey: ["model-endpoints"] });
   }
