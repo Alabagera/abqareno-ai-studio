@@ -25,7 +25,7 @@ export const TASK_LABELS: Record<ModelTask, string> = {
 
 export const AI_MODELS: AiModel[] = [
   { id: "openai/gpt-6-astra", task: "chat", name: "مساعد عبقرينو", description: "إجابة الأسئلة وكتابة السكربتات والإعلانات والمقالات", source: "Lovable AI", status: "ready" },
-  { id: "qwen3.5-397b-a17b", task: "chat", name: "Qwen3.5-397B-A17B", description: "نموذج مفتوح ذاتي الاستضافة قوي في العربية والإنجليزية — يحتاج خادم استدلال خاص", source: "Qwen", status: "planned", selfHosted: true },
+  { id: "qwen3-235b-a22b", task: "chat", name: "Qwen3-235B-A22B", description: "نموذج مفتوح ذاتي الاستضافة قوي في العربية والإنجليزية — يحتاج خادم استدلال خاص", source: "Qwen", status: "planned", selfHosted: true },
   { id: "xtts-v2", task: "tts", name: "XTTS-v2", description: "استنساخ صوتك من عينة قصيرة وتوليد كلام طبيعي بالعربية", source: "Coqui", status: "planned" },
   { id: "sadtalker", task: "avatar", name: "SadTalker", description: "تحريك صورة ثابتة لتتكلم بتزامن مع الصوت", source: "OpenTalker", status: "planned" },
   { id: "wav2lip", task: "avatar", name: "Wav2Lip", description: "مزامنة دقيقة لحركة الشفاه", source: "Rudrabha", status: "planned" },

@@ -27,7 +27,7 @@ function Layout() {
   const { user, loading } = useAuth();
   const navigate = useNavigate();
   const pathname = useRouterState({ select: (state) => state.location.pathname });
-  const { data: access } = useQuery({ queryKey: ["workspace-access", user?.id], enabled: Boolean(user), queryFn: async () => (await supabase.rpc("my_workspace_access")).data as Record<string, boolean> | null });
+  const { data: access, isPending: accessPending } = useQuery({ queryKey: ["workspace-access", user?.id], enabled: Boolean(user), queryFn: async () => (await supabase.rpc("my_workspace_access")).data as Record<string, boolean> | null });
   const visibleNav = nav.filter((item) => item.permission === null || access?.[item.permission] === true);
   const requiredPermission = nav.find((item) => item.to === pathname)?.permission;
   useEffect(() => {
@@ -59,7 +59,7 @@ function Layout() {
       </header>
 
       <main className="min-w-0 flex-1 px-3 pb-28 sm:px-4 md:px-10 md:py-8 md:pb-10">
-        {access && requiredPermission && access[requiredPermission] !== true ? <div className="glass rounded-2xl p-8 text-center text-muted-foreground">لم يمنحك المدير صلاحية استخدام هذه الصفحة.</div> : <Outlet />}
+        {accessPending ? <div className="grid min-h-48 place-items-center text-muted-foreground">جارٍ تحميل صلاحياتك…</div> : access && requiredPermission && access[requiredPermission] !== true ? <div className="glass rounded-2xl p-8 text-center text-muted-foreground">لم يمنحك المدير صلاحية استخدام هذه الصفحة.</div> : <Outlet />}
       </main>
 
       <nav className="glass fixed inset-x-2 bottom-2 z-40 flex justify-between overflow-x-auto rounded-2xl p-1 md:hidden" style={{ paddingBottom: "max(0.25rem, env(safe-area-inset-bottom))" }}>
