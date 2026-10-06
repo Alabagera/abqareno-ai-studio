@@ -1,10 +1,14 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
-import { ArrowLeft, Clapperboard, ImageIcon, Mic, Video, FileText } from "lucide-react";
+import { Clapperboard, ImageIcon, Mic, Video, FileText } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { PageHeader, STATUS_LABEL } from "@/components/PageHeader";
 import { AlabageraPortrait } from "@/components/AlabageraPortrait";
+import step1 from "@/assets/step-1.jpg";
+import step2 from "@/assets/step-2.jpg";
+import step3 from "@/assets/step-3.jpg";
+import step4 from "@/assets/step-4.jpg";
 
 export const Route = createFileRoute("/_authenticated/dashboard")({
   head: () => ({ meta: [{ title: "لوحة التحكم — عبقرينو" }, { name: "description", content: "نظرة عامة على مشاريعك وملفاتك." }, { property: "og:title", content: "لوحة تحكم عبقرينو" }, { property: "og:description", content: "إدارة مشاريع وملفات عبقرينو AI Studio." }, { property: "og:type", content: "website" }, { name: "twitter:card", content: "summary_large_image" }] }),
@@ -28,7 +32,12 @@ function Dashboard() {
     { l: "فيديوهات", v: count("video"), i: Video },
     { l: "مستندات", v: count("document"), i: FileText },
   ];
-  const steps = ["صوتك", "نموذج الصوت", "صورتك", "تحريك الوجه", "FFmpeg", "الفيديو النهائي"];
+  const steps = [
+    { img: step1, t: "ارفع صورتك وصوتك", d: "من «الأفاتار والأصوات» ارفع صورة واضحة للوجه وسجّل عينة صوتك 10–30 ثانية، أو صوّر وسجّل مباشرة من الموقع." },
+    { img: step2, t: "اكتب النص أو اطلبه من عبقرينو", d: "اكتب السكربت في الاستوديو أو اختر قالبًا في المساعد الذكي ثم «استخدام في الاستوديو»، واختر اللغة واللهجة وتحسين الصوت." },
+    { img: step3, t: "صمّم الفيديو", d: "اختر المقاس (ريلز، تيك توك، يوتيوب…)، الخلفية، الشعار، العناوين والترجمة، وحرّكها بإصبعك في المعاينة." },
+    { img: step4, t: "أنتج وانشر", d: "اضغط «إنتاج الفيديو»: يُولَّد صوتك، يتحرك وجهك بتزامن الشفاه، وتُدمج الترجمة، ثم حمّل الفيديو من المكتبة وانشره." },
+  ];
 
   return (
     <div>
@@ -43,16 +52,20 @@ function Dashboard() {
         ))}
       </div>
 
-      <section className="glass mt-6 rounded-2xl p-5">
-        <h2 className="mb-4 font-bold">مسار الإنتاج <span className="text-xs font-normal text-muted-foreground">(يُفعَّل في المرحلة 2)</span></h2>
-        <div className="flex flex-wrap items-center gap-2">
+      <section className="mt-6">
+        <h2 className="mb-4 font-bold">كيف تنتج فيديو في 4 خطوات</h2>
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
           {steps.map((s, i) => (
-            <div key={s} className="flex items-center gap-2">
-              <span className={`rounded-full px-3 py-1.5 text-xs ${i === steps.length - 1 ? "bg-gold-gradient text-primary-foreground font-bold" : "bg-secondary"}`}>{s}</span>
-              {i < steps.length - 1 && <ArrowLeft className="size-4 text-gold" />}
+            <div key={s.t} className="glass overflow-hidden rounded-2xl">
+              <img src={s.img} alt={s.t} loading="lazy" width={992} height={672} className="aspect-[3/2] w-full object-cover" />
+              <div className="p-4">
+                <div className="mb-1 flex items-center gap-2"><span className="grid size-7 place-items-center rounded-full bg-gold-gradient text-sm font-bold text-primary-foreground">{i + 1}</span><h3 className="font-bold">{s.t}</h3></div>
+                <p className="text-sm text-muted-foreground">{s.d}</p>
+              </div>
             </div>
           ))}
         </div>
+        <Button asChild variant="gold" className="mt-4"><Link to="/studio">ابدأ فيديو جديد</Link></Button>
       </section>
 
       <section className="mt-6">
