@@ -4,6 +4,7 @@ import { ArrowLeft, Clapperboard, ImageIcon, Mic, Video, FileText } from "lucide
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { PageHeader, STATUS_LABEL } from "@/components/PageHeader";
+import { AlabageraPortrait } from "@/components/AlabageraPortrait";
 
 export const Route = createFileRoute("/_authenticated/dashboard")({
   head: () => ({ meta: [{ title: "لوحة التحكم — عبقرينو" }, { name: "description", content: "نظرة عامة على مشاريعك وملفاتك." }, { property: "og:title", content: "لوحة تحكم عبقرينو" }, { property: "og:description", content: "إدارة مشاريع وملفات عبقرينو AI Studio." }, { property: "og:type", content: "website" }, { name: "twitter:card", content: "summary_large_image" }] }),
@@ -31,8 +32,7 @@ function Dashboard() {
 
   return (
     <div>
-      <PageHeader title="أهلًا بك في استوديو عبقرينو" subtitle="ابدأ مشروع فيديو جديد أو تصفّح مكتبتك"
-        action={<Button asChild variant="gold"><Link to="/studio">فيديو جديد</Link></Button>} />
+      <div className="mb-6 flex items-center gap-4"><AlabageraPortrait className="size-20 rounded-full border-2 border-gold shadow-gold" eager /><div className="min-w-0 flex-1"><PageHeader title="أهلًا بك في استوديو عبقرينو" subtitle="ابدأ مشروع فيديو أو محادثة ذكية جديدة" action={<Button asChild variant="gold"><Link to="/assistant">اسأل عبقرينو</Link></Button>} /></div></div>
       <div className="grid grid-cols-2 gap-3 md:grid-cols-5">
         {stats.map((s) => (
           <div key={s.l} className="glass rounded-2xl p-4">
