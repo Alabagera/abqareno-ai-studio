@@ -1,6 +1,6 @@
 import { createFileRoute, Link, Outlet, useNavigate } from "@tanstack/react-router";
 import { useEffect } from "react";
-import { LayoutDashboard, Clapperboard, FolderOpen, Cpu, LogOut } from "lucide-react";
+import { LayoutDashboard, Clapperboard, FolderOpen, Cpu, LogOut, UserRoundCog, Users } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
 import { supabase } from "@/integrations/supabase/client";
 import { Logo } from "@/components/Logo";
@@ -16,6 +16,8 @@ const nav = [
   { to: "/studio", label: "الاستوديو", icon: Clapperboard },
   { to: "/library", label: "المكتبة", icon: FolderOpen },
   { to: "/models", label: "النماذج", icon: Cpu },
+  { to: "/profiles", label: "هويتي", icon: UserRoundCog },
+  { to: "/team", label: "الفريق", icon: Users },
 ] as const;
 
 function Layout() {
@@ -53,7 +55,7 @@ function Layout() {
         <Outlet />
       </main>
 
-      <nav className="glass fixed inset-x-3 bottom-3 z-40 grid grid-cols-4 rounded-2xl p-1.5 md:hidden">
+      <nav className="glass fixed inset-x-3 bottom-3 z-40 grid grid-cols-6 rounded-2xl p-1.5 md:hidden">
         {nav.map((n) => (
           <Link key={n.to} to={n.to} className="flex flex-col items-center gap-1 rounded-xl py-2 text-[11px] text-muted-foreground" activeProps={{ className: "bg-secondary !text-gold" }}>
             <n.icon className="size-5" /> {n.label}

@@ -2,7 +2,7 @@ import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
-import { ImagePlus, Mic, Paperclip, Sparkles } from "lucide-react";
+import { ImagePlus, Mic, Paperclip, Sparkles, Image as ImageIcon, Stamp, Type } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { uploadMedia, signedUrl } from "@/lib/media";
 import { modelsFor } from "@/lib/ai/registry";
@@ -14,7 +14,14 @@ import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 
 export const Route = createFileRoute("/_authenticated/studio")({
-  head: () => ({ meta: [{ title: "الاستوديو — عبقرينو" }, { name: "description", content: "أنشئ فيديو Talking Avatar من صورتك ونصك." }] }),
+  head: () => ({ meta: [
+    { title: "استوديو الفيديو — عبقرينو AI Studio" },
+    { name: "description", content: "أنشئ فيديو متحدثًا بأفاتارك وصوتك وخلفيتك وشعارك." },
+    { property: "og:title", content: "استوديو الفيديو — عبقرينو" },
+    { property: "og:description", content: "إنشاء فيديوهات عربية بأفاتار وصوت وترجمة قابلة للتنسيق." },
+    { property: "og:type", content: "website" },
+    { name: "twitter:card", content: "summary_large_image" },
+  ] }),
   component: Studio,
 });
 
@@ -48,26 +55,51 @@ function Studio() {
   const [audioId, setAudioId] = useState<string | null>(null);
   const [voiceModel, setVoiceModel] = useState("xtts-v2");
   const [avatarModel, setAvatarModel] = useState("sadtalker");
+  const [avatarProfileId, setAvatarProfileId] = useState("");
+  const [voiceProfileId, setVoiceProfileId] = useState("");
+  const [backgroundId, setBackgroundId] = useState<string | null>(null);
+  const [backgroundUrl, setBackgroundUrl] = useState<string | null>(null);
+  const [logoId, setLogoId] = useState<string | null>(null);
+  const [logoUrl, setLogoUrl] = useState<string | null>(null);
+  const [videoTitle, setVideoTitle] = useState("");
+  const [extraText, setExtraText] = useState("");
   const [subs, setSubs] = useState(true);
   const [font, setFont] = useState<string>("Readex Pro");
   const [color, setColor] = useState<string>(COLORS[0]!);
   const [bg, setBg] = useState<string>(BGS[0]!.id);
   const [size, setSize] = useState(22);
   const [translateTo, setTranslateTo] = useState("");
+  const [activeColor, setActiveColor] = useState(COLORS[4]!);
+  const [activeSize, setActiveSize] = useState(28);
+  const [translationFont, setTranslationFont] = useState("Tajawal");
+  const [translationColor, setTranslationColor] = useState(COLORS[2]!);
+  const [translationActiveColor, setTranslationActiveColor] = useState(COLORS[0]!);
+  const [translationSize, setTranslationSize] = useState(20);
   const [busy, setBusy] = useState<string | null>(null);
   const imgIn = useRef<HTMLInputElement>(null);
   const audIn = useRef<HTMLInputElement>(null);
   const extraIn = useRef<HTMLInputElement>(null);
+  const bgIn = useRef<HTMLInputElement>(null);
+  const logoIn = useRef<HTMLInputElement>(null);
 
   const { data: images = [] } = useQuery({
     queryKey: ["assets", "image"],
     queryFn: async () => (await supabase.from("media_assets").select("*").eq("kind", "image").order("created_at", { ascending: false }).limit(8)).data ?? [],
   });
+  const { data: avatarProfiles = [] } = useQuery({ queryKey: ["avatar-profiles"], queryFn: async () => (await supabase.from("avatar_profiles").select("*").eq("status", "ready").order("created_at", { ascending: false })).data ?? [] });
+  const { data: voiceProfiles = [] } = useQuery({ queryKey: ["voice-profiles"], queryFn: async () => (await supabase.from("voice_profiles").select("*").eq("status", "ready").order("created_at", { ascending: false })).data ?? [] });
 
   useEffect(() => {
     const a = images.find((i) => i.id === imageId);
     if (a) signedUrl(a.storage_path).then(setImageUrl);
   }, [imageId, images]);
+
+  useEffect(() => {
+    const profile = avatarProfiles.find((item) => item.id === avatarProfileId);
+    if (profile?.cover_asset_id) {
+      setImageId(profile.cover_asset_id);
+    }
+  }, [avatarProfileId, avatarProfiles]);
 
   async function upload(file: File | undefined, kind: "image" | "audio" | null) {
     if (!file) return;
@@ -85,15 +117,34 @@ function Studio() {
     }
   }
 
+  async function uploadVisual(file: File | undefined, target: "background" | "logo") {
+    if (!file) return;
+    setBusy("upload");
+    try {
+      const asset = await uploadMedia(file, "image");
+      const url = await signedUrl(asset.storage_path);
+      if (target === "background") { setBackgroundId(asset.id); setBackgroundUrl(url); }
+      else { setLogoId(asset.id); setLogoUrl(url); }
+      qc.invalidateQueries({ queryKey: ["assets"] });
+      toast.success(target === "background" ? "تمت إضافة الخلفية" : "تمت إضافة الشعار");
+    } catch (error) { toast.error((error as Error).message); }
+    finally { setBusy(null); }
+  }
+
   async function save(status: "draft" | "queued"): Promise<void> {
     if (!title.trim()) { toast.error("أدخل عنوانًا للفيديو"); return; }
-    if (!imageId) { toast.error("ارفع صورة أولًا"); return; }
+    if (!imageId && !avatarProfileId) { toast.error("اختر أفاتارًا أو ارفع صورة أولًا"); return; }
     if (voiceMode === "tts" && !script.trim()) { toast.error("أدخل النص"); return; }
     setBusy(status);
     const { error } = await supabase.from("video_projects").insert({
       title, script_text: script, avatar_asset_id: imageId, audio_asset_id: voiceMode === "upload" ? audioId : null,
-      voice_model: voiceModel, avatar_model: avatarModel, subtitles_enabled: subs,
-      subtitle_style: { font, color, bg, size }, translate_to: translateTo || null, status,
+      voice_model: voiceModel, avatar_model: avatarModel, avatar_profile_id: avatarProfileId || null,
+      voice_profile_id: voiceProfileId || null, background_asset_id: backgroundId, logo_asset_id: logoId,
+      subtitles_enabled: subs, subtitle_style: { font, color, bg, size, activeColor, activeSize },
+      translate_to: translateTo || null, translation_style: { font: translationFont, color: translationColor, activeColor: translationActiveColor, size: translationSize },
+      title_overlay: { text: videoTitle, position: "top", font, color },
+      text_overlays: extraText.trim() ? [{ text: extraText.trim(), position: "middle", font, color }] : [],
+      logo_style: { position: "top-left", size: 18 }, status,
     });
     setBusy(null);
     if (error) { toast.error(error.message); return; }
@@ -114,6 +165,7 @@ function Studio() {
           </Card>
 
           <Card n="2" t="صورتك">
+            {avatarProfiles.length > 0 && <Select label="الأفاتار المحفوظ" value={avatarProfileId} onChange={setAvatarProfileId} options={[{ id: "", l: "استخدام صورة جديدة" }, ...avatarProfiles.map((p) => ({ id: p.id, l: p.name }))]} />}
             <input ref={imgIn} hidden type="file" accept="image/*" onChange={(e) => upload(e.target.files?.[0], "image")} />
             <div className="flex gap-2 overflow-x-auto pb-1">
               <button onClick={() => imgIn.current?.click()} className="grid size-20 shrink-0 place-items-center rounded-xl border border-dashed border-primary/50 text-gold">
@@ -132,7 +184,10 @@ function Studio() {
               <Seg active={voiceMode === "upload"} onClick={() => setVoiceMode("upload")}><Mic className="size-4" /> رفع تسجيل صوتي</Seg>
             </div>
             {voiceMode === "tts" ? (
-              <Select label="نموذج الصوت" value={voiceModel} onChange={setVoiceModel} options={modelsFor("tts").map((m) => ({ id: m.id, l: m.name }))} />
+              <>
+                {voiceProfiles.length > 0 && <Select label="الصوت الثابت المحفوظ" value={voiceProfileId} onChange={setVoiceProfileId} options={[{ id: "", l: "بدون صوت محفوظ" }, ...voiceProfiles.map((p) => ({ id: p.id, l: p.name }))]} />}
+                <Select label="نموذج الصوت" value={voiceModel} onChange={setVoiceModel} options={modelsFor("tts").map((m) => ({ id: m.id, l: m.name }))} />
+              </>
             ) : (
               <div className="mt-3">
                 <input ref={audIn} hidden type="file" accept="audio/*" onChange={(e) => upload(e.target.files?.[0], "audio")} />
@@ -157,6 +212,10 @@ function Studio() {
                   <Label className="mb-2 block text-xs text-muted-foreground">اللون</Label>
                   <div className="flex gap-2">{COLORS.map((c) => <button key={c} aria-label="لون" onClick={() => setColor(c)} className={`size-8 rounded-full border-2 ${color === c ? "border-foreground" : "border-transparent"}`} style={{ background: c }} />)}</div>
                 </div>
+                <div className="grid gap-4 sm:grid-cols-2">
+                  <div><Label className="mb-2 block text-xs text-muted-foreground">لون الكلمة المنطوقة الآن</Label><div className="flex gap-2">{COLORS.map((c) => <button key={c} aria-label="لون الكلمة الحالية" onClick={() => setActiveColor(c)} className={`size-8 rounded-full border-2 ${activeColor === c ? "border-foreground" : "border-transparent"}`} style={{ background: c }} />)}</div></div>
+                  <div><Label className="mb-2 block text-xs text-muted-foreground">حجم الكلمة الحالية: {activeSize}</Label><input type="range" min={16} max={44} value={activeSize} onChange={(e) => setActiveSize(+e.target.value)} className="w-full accent-[var(--gold)]" /></div>
+                </div>
                 <div>
                   <Label className="mb-2 block text-xs text-muted-foreground">الخلفية</Label>
                   <div className="grid grid-cols-3 gap-2">{BGS.map((b) => <Seg key={b.id} active={bg === b.id} onClick={() => setBg(b.id)}>{b.l}</Seg>)}</div>
@@ -168,9 +227,15 @@ function Studio() {
               </div>
             )}
             <Select label="ترجمة إلى لغة أخرى" value={translateTo} onChange={setTranslateTo} options={LANGS} />
+            {translateTo && <div className="mt-4 space-y-4 border-t border-border pt-4"><h3 className="font-bold">تنسيق الترجمة</h3><Select label="خط الترجمة" value={translationFont} onChange={setTranslationFont} options={FONTS.map((f) => ({ id: f.id, l: f.l }))} /><div className="grid gap-4 sm:grid-cols-2"><div><Label className="mb-2 block text-xs text-muted-foreground">لون الترجمة</Label><div className="flex gap-2">{COLORS.map((c) => <button key={c} aria-label="لون الترجمة" onClick={() => setTranslationColor(c)} className={`size-8 rounded-full border-2 ${translationColor === c ? "border-foreground" : "border-transparent"}`} style={{ background: c }} />)}</div></div><div><Label className="mb-2 block text-xs text-muted-foreground">لون الكلمة المترجمة الحالية</Label><div className="flex gap-2">{COLORS.map((c) => <button key={c} aria-label="لون الكلمة المترجمة الحالية" onClick={() => setTranslationActiveColor(c)} className={`size-8 rounded-full border-2 ${translationActiveColor === c ? "border-foreground" : "border-transparent"}`} style={{ background: c }} />)}</div></div></div><Label className="block text-xs text-muted-foreground">حجم الترجمة: {translationSize}</Label><input type="range" min={14} max={36} value={translationSize} onChange={(e) => setTranslationSize(+e.target.value)} className="w-full accent-[var(--gold)]" /></div>}
           </Card>
 
-          <Card n="5" t="ملفات إضافية (اختياري)">
+          <Card n="5" t="الخلفية والشعار والنصوص">
+            <div className="grid gap-3 sm:grid-cols-2"><div><input ref={bgIn} hidden type="file" accept="image/*" onChange={(e) => uploadVisual(e.target.files?.[0], "background")} /><Button className="w-full" variant="glass" onClick={() => bgIn.current?.click()}><ImageIcon />{backgroundId ? "تمت إضافة الخلفية ✓" : "إضافة صورة خلفية"}</Button></div><div><input ref={logoIn} hidden type="file" accept="image/*" onChange={(e) => uploadVisual(e.target.files?.[0], "logo")} /><Button className="w-full" variant="glass" onClick={() => logoIn.current?.click()}><Stamp />{logoId ? "تمت إضافة الشعار ✓" : "إضافة شعار"}</Button></div></div>
+            <div className="mt-4 grid gap-3"><div><Label htmlFor="video-title">عنوان يظهر أعلى الفيديو</Label><Input id="video-title" className="mt-1" value={videoTitle} onChange={(e) => setVideoTitle(e.target.value)} placeholder="اكتب عنوان الفيديو" /></div><div><Label htmlFor="extra-text">نص إضافي داخل الفيديو</Label><Input id="extra-text" className="mt-1" value={extraText} onChange={(e) => setExtraText(e.target.value)} placeholder="مثال: تابعني للمزيد" /></div></div>
+          </Card>
+
+          <Card n="6" t="ملفات إضافية (اختياري)">
             <input ref={extraIn} hidden multiple type="file" accept="video/*,audio/*,.pdf,.doc,.docx,.txt,.srt,.vtt" onChange={async (e) => { for (const f of Array.from(e.target.files ?? [])) await upload(f, null); }} />
             <Button variant="glass" onClick={() => extraIn.current?.click()}><Paperclip /> رفع فيديو / صوت / مستند</Button>
           </Card>
@@ -179,10 +244,15 @@ function Studio() {
         <div className="lg:sticky lg:top-8 lg:self-start">
           <div className="glass overflow-hidden rounded-3xl">
             <div className="relative aspect-[9/12] bg-secondary">
-              {imageUrl ? <img src={imageUrl} alt="" className="size-full object-cover" /> : <div className="grid size-full place-items-center text-sm text-muted-foreground">معاينة الفيديو</div>}
+              {backgroundUrl && <img src={backgroundUrl} alt="الخلفية" className="absolute inset-0 size-full object-cover" />}
+              {imageUrl ? <img src={imageUrl} alt="الأفاتار" className={`relative size-full ${backgroundUrl ? "object-contain object-bottom" : "object-cover"}`} /> : <div className="grid size-full place-items-center text-sm text-muted-foreground">معاينة الفيديو</div>}
+              {videoTitle && <div className="absolute inset-x-4 top-5 text-center"><span className="inline-block rounded-lg bg-background/75 px-3 py-1.5 text-lg font-bold">{videoTitle}</span></div>}
+              {logoUrl && <img src={logoUrl} alt="الشعار" className="absolute start-4 top-4 size-14 object-contain" />}
+              {extraText && <div className="absolute inset-x-4 top-1/2 text-center"><span className="rounded-lg bg-background/70 px-3 py-1 text-sm"><Type className="me-1 inline size-3" />{extraText}</span></div>}
               {subs && (
                 <div className="absolute inset-x-4 bottom-6 text-center">
-                  <span className="inline-block rounded-lg px-3 py-1.5 font-bold leading-relaxed" style={{ fontFamily: font, color, background: bg, fontSize: size }}>{sample}</span>
+                  <span className="inline-block rounded-lg px-3 py-1.5 font-bold leading-relaxed" style={{ fontFamily: font, color, background: bg, fontSize: size }}>{sample.split(" ").map((word, index) => <span key={`${word}-${index}`} style={index === 0 ? { color: activeColor, fontSize: activeSize } : undefined}>{word} </span>)}</span>
+                  {translateTo && <span className="mt-2 block font-bold" style={{ fontFamily: translationFont, color: translationColor, fontSize: translationSize }}><span style={{ color: translationActiveColor }}>Translation</span> preview</span>}
                 </div>
               )}
             </div>
