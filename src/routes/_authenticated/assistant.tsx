@@ -99,7 +99,7 @@ function Assistant() {
         {messages.length === 0 && <div className="glass rounded-2xl p-8 text-center text-muted-foreground"><Bot className="mx-auto mb-2 size-10 text-gold" />اختر قالبًا أو اكتب طلبك بالأسفل</div>}
         {messages.map((m, i) => (
           <div key={i} className={`rounded-2xl p-4 ${m.role === "user" ? "ms-8 bg-secondary" : "glass me-4"}`}>
-            <div className="whitespace-pre-wrap text-sm leading-7">{m.content || (busy ? "يكتب…" : "")}</div>
+            <div dir="auto" className="bilingual-text whitespace-pre-wrap text-sm leading-7">{m.content || (busy ? "يكتب…" : "")}</div>
             {m.role === "assistant" && m.content && !(busy && i === messages.length - 1) && (
               <div className="mt-3 flex flex-wrap gap-2">
                 <Button size="sm" variant="ghost" onClick={() => { navigator.clipboard.writeText(m.content); toast.success("تم النسخ"); }}><Copy />نسخ</Button>
@@ -110,7 +110,7 @@ function Assistant() {
         ))}
       </div>
       <div className="glass sticky bottom-24 mt-4 rounded-2xl p-2 md:bottom-4">
-        <Textarea rows={3} value={input} onChange={(e) => setInput(e.target.value)} placeholder="اكتب سؤالك أو طلبك…" className="border-0 bg-transparent"
+        <Textarea dir="auto" rows={3} value={input} onChange={(e) => setInput(e.target.value)} placeholder="اكتب سؤالك أو طلبك بالعربية أو English…" className="bilingual-text border-0 bg-transparent"
           onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); void send(); } }} />
         <div className="flex justify-between">
           <Button variant="ghost" size="sm" onClick={() => setMessages([])} disabled={busy || !messages.length}><Trash2 />محادثة جديدة</Button>

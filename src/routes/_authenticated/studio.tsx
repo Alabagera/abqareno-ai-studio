@@ -34,6 +34,13 @@ const BGS = [
   { id: "rgba(30,58,138,0.8)", l: "أزرق" },
   { id: "rgba(255,255,255,0.85)", l: "فاتح" },
 ];
+const DEFAULT_CAPTION_BG = "rgba(10,15,40,0.75)";
+const SCRIPT_LANGS = [
+  { id: "auto", l: "تلقائي — العربية أو English" },
+  { id: "ar", l: "العربية" },
+  { id: "en", l: "English" },
+];
+const FALLBACK_SOCIAL_SIZE = { id: "custom", platform: "مخصص", label: "مقاس مخصص", ratio: "custom", w: 1080, h: 1080 };
 const LANGS = [
   { id: "", l: "بدون ترجمة" }, { id: "en", l: "الإنجليزية" }, { id: "fr", l: "الفرنسية" }, { id: "tr", l: "التركية" },
   { id: "es", l: "الإسبانية" }, { id: "de", l: "الألمانية" }, { id: "ur", l: "الأردية" }, { id: "id", l: "الإندونيسية" },
@@ -44,6 +51,7 @@ function Studio() {
   const navigate = useNavigate();
   const [title, setTitle] = useState("");
   const [script, setScript] = useState("");
+  const [scriptLanguage, setScriptLanguage] = useState("auto");
   const [imageId, setImageId] = useState<string | null>(null);
   const [imageUrl, setImageUrl] = useState<string | null>(null);
   const [voiceMode, setVoiceMode] = useState<"tts" | "upload">("tts");
@@ -63,7 +71,7 @@ function Studio() {
   const [subs, setSubs] = useState(true);
   const [font, setFont] = useState("Readex Pro");
   const [color, setColor] = useState("#FFFFFF");
-  const [bg, setBg] = useState(BGS[0]!.id);
+  const [bg, setBg] = useState(DEFAULT_CAPTION_BG);
   const [size, setSize] = useState(22);
   const [translateTo, setTranslateTo] = useState("");
   const [activeColor, setActiveColor] = useState("#FFD700");
@@ -85,7 +93,7 @@ function Studio() {
   const bgIn = useRef<HTMLInputElement>(null);
   const logoIn = useRef<HTMLInputElement>(null);
 
-  const sel = SOCIAL_SIZES.find((s) => s.id === sizeId)!;
+  const sel = SOCIAL_SIZES.find((s) => s.id === sizeId) ?? FALLBACK_SOCIAL_SIZE;
   const w = sel.id === "custom" ? customW : sel.w;
   const h = sel.id === "custom" ? customH : sel.h;
   const minutes = estimateMinutes(script);
@@ -134,9 +142,11 @@ function Studio() {
     if (!synth) { toast.error("متصفحك لا يدعم تجربة النطق"); return; }
     if (speaking) { synth.cancel(); setSpeaking(false); return; }
     if (!script.trim()) { toast.error("اكتب النص أولًا"); return; }
+    const hasArabic = /[\u0600-\u06ff]/.test(script);
+    const speechLanguage = scriptLanguage === "auto" ? (hasArabic ? "ar" : "en") : scriptLanguage;
     const u = new SpeechSynthesisUtterance(script);
-    u.lang = "ar-SA"; u.rate = rate; u.pitch = pitch;
-    const v = synth.getVoices().find((x) => x.lang.startsWith("ar"));
+    u.lang = speechLanguage === "ar" ? "ar-SA" : "en-US"; u.rate = rate; u.pitch = pitch;
+    const v = synth.getVoices().find((x) => x.lang.toLowerCase().startsWith(speechLanguage));
     if (v) u.voice = v;
     u.onend = () => setSpeaking(false);
     u.onerror = () => setSpeaking(false);
@@ -152,10 +162,10 @@ function Studio() {
       title, script_text: script, avatar_asset_id: imageId, audio_asset_id: voiceMode === "upload" ? audioId : null,
       voice_model: voiceModel, avatar_model: avatarModel, avatar_profile_id: avatarProfileId || null,
       voice_profile_id: voiceProfileId || null, background_asset_id: backgroundId, logo_asset_id: logoId,
-      subtitles_enabled: subs, subtitle_style: { font, color, bg, size, activeColor, activeSize },
+      subtitles_enabled: subs, subtitle_style: { font, color, bg, size, activeColor, activeSize, language: scriptLanguage, direction: "auto" },
       translate_to: translateTo || null, translation_style: { font: translationFont, color: translationColor, activeColor: translationActiveColor, size: translationSize },
-      title_overlay: { text: videoTitle, position: "top", font: titleFont, color: titleColor },
-      text_overlays: extraText.trim() ? [{ text: extraText.trim(), position: "middle", font: titleFont, color: titleColor }] : [],
+      title_overlay: { text: videoTitle, position: "top", font: titleFont, color: titleColor, direction: "auto" },
+      text_overlays: extraText.trim() ? [{ text: extraText.trim(), position: "middle", font: titleFont, color: titleColor, direction: "auto" }] : [],
       logo_style: { position: "top-left", size: 18 }, status,
       aspect_ratio: sel.id === "custom" ? `${w}x${h}` : sel.ratio, platform: sel.id, duration_minutes: minutes || null,
     });
@@ -181,7 +191,7 @@ function Studio() {
       <div className="grid gap-5 lg:grid-cols-[1fr_380px]">
         <div className="min-w-0 space-y-5">
           <Card n="1" t="عنوان المشروع ومقاس الفيديو">
-            <Input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="مثال: تقديم قناتي" />
+            <Input dir="auto" value={title} onChange={(e) => setTitle(e.target.value)} placeholder="مثال: تقديم قناتي / Channel intro" />
             <div className="mt-4 space-y-3">
               {platforms.map((p) => (
                 <div key={p}>
@@ -211,7 +221,8 @@ function Studio() {
           </Card>
 
           <Card n="3" t="النص والصوت">
-            <Textarea rows={5} value={script} onChange={(e) => setScript(e.target.value)} placeholder="اكتب ما تريد أن يقوله الأفاتار…" />
+            <Select label="لغة النص المنطوق" value={scriptLanguage} onChange={setScriptLanguage} options={SCRIPT_LANGS} />
+            <Textarea dir="auto" lang={scriptLanguage === "auto" ? undefined : scriptLanguage} rows={5} value={script} onChange={(e) => setScript(e.target.value)} placeholder="اكتب بالعربية أو English ما تريد أن يقوله الأفاتار…" className="mt-3 bilingual-text" />
             <p className="mt-1 text-xs text-muted-foreground">المدة التقديرية: {minutes} دقيقة{usage?.max_minutes_per_video != null && minutes > usage.max_minutes_per_video ? <span className="text-destructive"> — تتجاوز الحد المسموح</span> : null}</p>
             <div className="mt-3 grid grid-cols-2 gap-2">
               <Seg active={voiceMode === "tts"} onClick={() => setVoiceMode("tts")}><Sparkles className="size-4" /> تحويل النص لصوتي</Seg>
@@ -272,8 +283,8 @@ function Studio() {
               <div><input ref={logoIn} hidden type="file" accept="image/*" onChange={(e) => uploadVisual(e.target.files?.[0], "logo")} /><Button className="w-full" variant="glass" onClick={() => logoIn.current?.click()}><Stamp />{logoId ? "تمت إضافة الشعار ✓" : "إضافة شعار"}</Button></div>
             </div>
             <div className="mt-4 grid gap-3">
-              <div><Label htmlFor="video-title">عنوان يظهر أعلى الفيديو</Label><Input id="video-title" className="mt-1" value={videoTitle} onChange={(e) => setVideoTitle(e.target.value)} placeholder="اكتب عنوان الفيديو" /></div>
-              <div><Label htmlFor="extra-text">نص إضافي داخل الفيديو</Label><Input id="extra-text" className="mt-1" value={extraText} onChange={(e) => setExtraText(e.target.value)} placeholder="مثال: تابعني للمزيد" /></div>
+              <div><Label htmlFor="video-title">عنوان يظهر أعلى الفيديو</Label><Input id="video-title" dir="auto" className="mt-1 bilingual-text" value={videoTitle} onChange={(e) => setVideoTitle(e.target.value)} placeholder="عنوان عربي أو English title" /></div>
+              <div><Label htmlFor="extra-text">نص إضافي داخل الفيديو</Label><Input id="extra-text" dir="auto" className="mt-1 bilingual-text" value={extraText} onChange={(e) => setExtraText(e.target.value)} placeholder="مثال: تابعني للمزيد / Follow for more" /></div>
               <FontSelect label="خط العناوين" value={titleFont} onChange={setTitleFont} fonts={FONTS} />
               <ColorPicker label="لون العناوين" value={titleColor} onChange={setTitleColor} />
             </div>
@@ -291,13 +302,13 @@ function Studio() {
               <div className="relative w-full overflow-hidden rounded-xl bg-secondary" style={{ aspectRatio: `${w} / ${h}`, maxHeight: "60vh", maxWidth: `calc(60vh * ${w / h})` }}>
                 {backgroundUrl && <img src={backgroundUrl} alt="الخلفية" className="absolute inset-0 size-full object-cover" />}
                 {imageUrl ? <img src={imageUrl} alt="الأفاتار" className={`relative size-full ${backgroundUrl ? "object-contain object-bottom" : "object-cover"}`} /> : <div className="grid size-full place-items-center text-sm text-muted-foreground">معاينة الفيديو</div>}
-                {videoTitle && <div className="absolute inset-x-3 top-4 text-center"><span className="inline-block rounded-lg bg-black/50 px-3 py-1 text-lg font-bold" style={{ fontFamily: titleFont, color: titleColor }}>{videoTitle}</span></div>}
+                {videoTitle && <div className="absolute inset-x-3 top-4 text-center"><span dir="auto" className="bilingual-text inline-block max-w-full rounded-lg bg-black/50 px-3 py-1 text-lg font-bold" style={{ fontFamily: `${titleFont}, Noto Sans Arabic, Noto Sans, sans-serif`, color: titleColor }}>{videoTitle}</span></div>}
                 {logoUrl && <img src={logoUrl} alt="الشعار" className="absolute start-3 top-3 size-12 object-contain" />}
-                {extraText && <div className="absolute inset-x-3 top-1/2 text-center"><span className="rounded-lg bg-black/50 px-3 py-1 text-sm" style={{ fontFamily: titleFont, color: titleColor }}><Type className="me-1 inline size-3" />{extraText}</span></div>}
+                {extraText && <div className="absolute inset-x-3 top-1/2 text-center"><span dir="auto" className="bilingual-text inline-block max-w-full rounded-lg bg-black/50 px-3 py-1 text-sm" style={{ fontFamily: `${titleFont}, Noto Sans Arabic, Noto Sans, sans-serif`, color: titleColor }}><Type className="me-1 inline size-3" />{extraText}</span></div>}
                 {subs && (
                   <div className="absolute inset-x-3 bottom-4 text-center">
-                    <span className="inline-block rounded-lg px-3 py-1.5 font-bold leading-relaxed" style={{ fontFamily: font, color, background: bg, fontSize: size }}>{sample.split(" ").map((word, index) => <span key={`${word}-${index}`} style={index === 0 ? { color: activeColor, fontSize: activeSize } : undefined}>{word} </span>)}</span>
-                    {translateTo && <span className="mt-2 block font-bold" style={{ fontFamily: translationFont, color: translationColor, fontSize: translationSize }}><span style={{ color: translationActiveColor }}>Translation</span> preview</span>}
+                    <span dir="auto" lang={scriptLanguage === "auto" ? undefined : scriptLanguage} className="bilingual-text inline-block max-w-full rounded-lg px-3 py-1.5 font-bold leading-relaxed" style={{ fontFamily: `${font}, Noto Sans Arabic, Noto Sans, sans-serif`, color, background: bg, fontSize: size }}>{sample.split(/(\s+)/).map((word, index) => <span key={`${word}-${index}`} style={index === 0 ? { color: activeColor, fontSize: activeSize } : undefined}>{word}</span>)}</span>
+                    {translateTo && <span dir={translateTo === "en" ? "ltr" : "auto"} lang={translateTo} className="bilingual-text mt-2 block font-bold" style={{ fontFamily: `${translationFont}, Noto Sans Arabic, Noto Sans, sans-serif`, color: translationColor, fontSize: translationSize }}><span style={{ color: translationActiveColor }}>Translation</span> preview</span>}
                   </div>
                 )}
               </div>
