@@ -14,6 +14,123 @@ export type Database = {
   }
   public: {
     Tables: {
+      assistant_attachments: {
+        Row: {
+          asset_id: string
+          created_at: string
+          created_by: string
+          id: string
+          message_id: string | null
+          thread_id: string
+        }
+        Insert: {
+          asset_id: string
+          created_at?: string
+          created_by?: string
+          id?: string
+          message_id?: string | null
+          thread_id: string
+        }
+        Update: {
+          asset_id?: string
+          created_at?: string
+          created_by?: string
+          id?: string
+          message_id?: string | null
+          thread_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "assistant_attachments_asset_id_fkey"
+            columns: ["asset_id"]
+            isOneToOne: false
+            referencedRelation: "media_assets"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "assistant_attachments_message_id_fkey"
+            columns: ["message_id"]
+            isOneToOne: false
+            referencedRelation: "assistant_messages"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "assistant_attachments_thread_id_fkey"
+            columns: ["thread_id"]
+            isOneToOne: false
+            referencedRelation: "assistant_threads"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      assistant_messages: {
+        Row: {
+          content: string
+          created_at: string
+          created_by: string
+          id: string
+          parts: Json
+          role: string
+          thread_id: string
+        }
+        Insert: {
+          content?: string
+          created_at?: string
+          created_by?: string
+          id?: string
+          parts?: Json
+          role: string
+          thread_id: string
+        }
+        Update: {
+          content?: string
+          created_at?: string
+          created_by?: string
+          id?: string
+          parts?: Json
+          role?: string
+          thread_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "assistant_messages_thread_id_fkey"
+            columns: ["thread_id"]
+            isOneToOne: false
+            referencedRelation: "assistant_threads"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      assistant_threads: {
+        Row: {
+          created_at: string
+          created_by: string
+          id: string
+          mode: string
+          owner_id: string
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string
+          id?: string
+          mode?: string
+          owner_id?: string
+          title?: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string
+          id?: string
+          mode?: string
+          owner_id?: string
+          title?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       avatar_profiles: {
         Row: {
           cover_asset_id: string | null

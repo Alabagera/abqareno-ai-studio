@@ -2,6 +2,7 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { Mic, ImageIcon, Video, Languages, Captions, Cpu } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Logo } from "@/components/Logo";
+import { AlabageraPortrait } from "@/components/AlabageraPortrait";
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -36,13 +37,14 @@ function Index() {
         </Button>
       </header>
       <main className="mx-auto max-w-6xl px-5 pb-20">
-        <section className="py-14 text-center md:py-24">
+        <section className="relative overflow-hidden py-10 text-center md:py-20">
+          <AlabageraPortrait className="mx-auto mb-6 aspect-square w-36 rounded-full border-4 border-gold shadow-gold motion-safe:animate-in motion-safe:zoom-in-90 md:w-52" eager />
           <p className="mb-4 inline-block rounded-full glass px-4 py-1 text-xs text-gold-soft">Alabagera AI</p>
           <h1 className="text-4xl font-bold leading-tight md:text-6xl">
             صورتك + صوتك = <span className="text-gold-gradient">فيديو يتكلم</span>
           </h1>
           <p className="mx-auto mt-5 max-w-xl text-muted-foreground md:text-lg">
-            استوديو عربي شخصي لإنشاء فيديوهات Talking Avatar، مع ترجمة نصية تلقائية وترجمة لغات.
+            استوديو عربي شخصي لصناعة الفيديو والمحتوى، مع مساعد ذكي للترجمة والبرمجة والكورسات وتحليل الملفات.
           </p>
           <div className="mt-8 flex justify-center gap-3">
             <Button asChild variant="gold" size="lg">

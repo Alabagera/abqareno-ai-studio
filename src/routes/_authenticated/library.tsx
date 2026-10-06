@@ -2,9 +2,9 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useRef, useState } from "react";
 import { toast } from "sonner";
-import { Trash2, Upload } from "lucide-react";
+import { Download, Trash2, Upload } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
-import { KIND_META, uploadMedia, deleteMedia, formatSize, type MediaKind } from "@/lib/media";
+import { KIND_META, uploadMedia, deleteMedia, downloadMedia, formatSize, type MediaKind } from "@/lib/media";
 import { MediaThumb } from "@/components/MediaThumb";
 import { PageHeader, STATUS_LABEL } from "@/components/PageHeader";
 import { Button } from "@/components/ui/button";
@@ -20,6 +20,7 @@ function Library() {
   const qc = useQueryClient();
   const [tab, setTab] = useState<Tab>("videos");
   const [busy, setBusy] = useState(false);
+  const [selected, setSelected] = useState<string[]>([]);
   const input = useRef<HTMLInputElement>(null);
 
   const { data: assets = [] } = useQuery({
@@ -53,6 +54,12 @@ function Library() {
 
   const tabs: { k: Tab; l: string }[] = [{ k: "videos", l: "سجل الفيديوهات" }, ...(Object.keys(KIND_META) as MediaKind[]).map((k) => ({ k, l: KIND_META[k].label }))];
   const list = tab === "videos" ? [] : assets.filter((a) => a.kind === tab);
+  async function removeSelected() {
+    const targets = assets.filter((asset) => selected.includes(asset.id));
+    if (!targets.length || !confirm(`حذف ${targets.length} ملف نهائيًا؟`)) return;
+    await Promise.all(targets.map((asset) => deleteMedia(asset.id, asset.storage_path)));
+    setSelected([]); await qc.invalidateQueries({ queryKey: ["assets"] }); toast.success("تم حذف الملفات المحددة");
+  }
 
   return (
     <div>
@@ -68,6 +75,7 @@ function Library() {
           <button key={t.k} onClick={() => setTab(t.k)} className={`shrink-0 rounded-full px-4 py-1.5 text-sm ${tab === t.k ? "bg-gold-gradient font-bold text-primary-foreground" : "glass text-muted-foreground"}`}>{t.l}</button>
         ))}
       </div>
+      {tab !== "videos" && selected.length > 0 && <div className="mb-4 flex items-center justify-between rounded-lg border bg-secondary p-2 text-sm"><span>تم تحديد {selected.length}</span><Button variant="destructive" size="sm" onClick={removeSelected}><Trash2 />حذف المحدد</Button></div>}
 
       {tab === "videos" ? (
         projects.length === 0 ? <Empty /> : (
@@ -94,13 +102,14 @@ function Library() {
         <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
           {list.map((a) => (
             <div key={a.id} className="glass overflow-hidden rounded-2xl">
+              <label className="absolute z-10 m-2 grid size-7 cursor-pointer place-items-center rounded-md bg-background"><input type="checkbox" checked={selected.includes(a.id)} onChange={(event) => setSelected((current) => event.target.checked ? [...current, a.id] : current.filter((id) => id !== a.id))} aria-label={`تحديد ${a.name}`} /></label>
               <MediaThumb path={a.storage_path} kind={a.kind} className="aspect-square w-full" />
               <div className="flex items-center justify-between gap-1 p-2.5">
                 <div className="min-w-0">
                   <p className="truncate text-xs" dir="ltr">{a.name}</p>
                   <p className="text-[10px] text-muted-foreground">{formatSize(a.size_bytes)}</p>
                 </div>
-                <Button variant="ghost" size="icon" aria-label="حذف" onClick={async () => { await deleteMedia(a.id, a.storage_path); qc.invalidateQueries({ queryKey: ["assets"] }); }}><Trash2 /></Button>
+                <div className="flex"><Button variant="ghost" size="icon" aria-label="تنزيل" onClick={() => downloadMedia(a.storage_path, a.name)}><Download /></Button><Button variant="ghost" size="icon" aria-label="حذف" onClick={async () => { if (!confirm("حذف الملف نهائيًا؟")) return; await deleteMedia(a.id, a.storage_path); qc.invalidateQueries({ queryKey: ["assets"] }); }}><Trash2 /></Button></div>
               </div>
             </div>
           ))}
