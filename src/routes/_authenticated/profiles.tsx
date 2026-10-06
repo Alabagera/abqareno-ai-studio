@@ -1,12 +1,16 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Camera, Check, Images, Mic2, Plus, Sparkles, Trash2, Upload } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { uploadMedia } from "@/lib/media";
 import { PageHeader } from "@/components/PageHeader";
 import { MediaThumb } from "@/components/MediaThumb";
+import { AudioRecorder, CameraCapture } from "@/components/MediaCapture";
+import { VoiceEnhancer } from "@/components/VoiceEnhancer";
+import { DEFAULT_FX, type VoiceFx } from "@/lib/voice-fx";
+import { signedUrl } from "@/lib/media";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -31,6 +35,8 @@ function ProfilesPage() {
   const [avatarAssets, setAvatarAssets] = useState<string[]>([]);
   const [voiceAssets, setVoiceAssets] = useState<string[]>([]);
   const [busy, setBusy] = useState(false);
+  const [fx, setFx] = useState<VoiceFx>(DEFAULT_FX);
+  const [sampleUrl, setSampleUrl] = useState<string | null>(null);
   const imageInput = useRef<HTMLInputElement>(null);
   const audioInput = useRef<HTMLInputElement>(null);
 
@@ -47,7 +53,7 @@ function ProfilesPage() {
     queryFn: async () => (await supabase.from("media_assets").select("*").order("created_at", { ascending: false })).data ?? [],
   });
 
-  async function uploadMany(files: FileList | null, kind: "image" | "audio") {
+  async function uploadMany(files: FileList | File[] | null, kind: "image" | "audio") {
     if (!files?.length) return;
     setBusy(true);
     try {
@@ -60,6 +66,11 @@ function ProfilesPage() {
     } catch (error) { toast.error((error as Error).message); }
     finally { setBusy(false); }
   }
+
+  useEffect(() => {
+    const a = assets.find((x) => x.id === voiceAssets[voiceAssets.length - 1]);
+    if (a) signedUrl(a.storage_path).then(setSampleUrl); else setSampleUrl(null);
+  }, [voiceAssets, assets]);
 
   async function saveAvatar() {
     const coverAssetId = avatarAssets[0];
@@ -83,7 +94,7 @@ function ProfilesPage() {
     }
     const { error } = await supabase.from("voice_profiles").insert({
       name: voiceName.trim(), sample_asset_ids: voiceAssets, primary_sample_asset_id: primarySampleId, status: "ready",
-      enhancement: { clarity: 100, noise_reduction: 100, studio_quality: true },
+      enhancement: { ...fx, studio_quality: true },
     });
     if (error) { toast.error(error.message); return; }
     setVoiceName(""); setVoiceAssets([]); await qc.invalidateQueries({ queryKey: ["voice-profiles"] });
@@ -105,6 +116,7 @@ function ProfilesPage() {
             <Input id="avatar-name" className="mt-2" value={avatarName} onChange={(e) => setAvatarName(e.target.value)} placeholder="مثال: عبقرينو الرسمي" />
             <input ref={imageInput} hidden multiple type="file" accept="image/*" onChange={(e) => uploadMany(e.target.files, "image")} />
             <Button className="mt-4" variant="glass" disabled={busy} onClick={() => imageInput.current?.click()}><Upload />رفع صور الوجه</Button>
+            <span className="ms-2 inline-block"><CameraCapture allowVideo={false} label="التقط صورة الآن" onSave={(f) => uploadMany([f], "image")} /></span>
             <SelectedAssets ids={avatarAssets} assets={assets} />
             <Button className="mt-4 w-full md:w-auto" variant="gold" disabled={busy} onClick={saveAvatar}><Sparkles />حفظ الأفاتار النهائي</Button>
           </section>
@@ -117,8 +129,9 @@ function ProfilesPage() {
             <Input id="voice-name" className="mt-2" value={voiceName} onChange={(e) => setVoiceName(e.target.value)} placeholder="مثال: صوتي الرسمي" />
             <input ref={audioInput} hidden multiple type="file" accept="audio/*" onChange={(e) => uploadMany(e.target.files, "audio")} />
             <Button className="mt-4" variant="glass" disabled={busy} onClick={() => audioInput.current?.click()}><Upload />رفع عينات الصوت</Button>
+            <span className="ms-2 inline-block"><AudioRecorder label="سجّل صوتك الآن" onSave={(f) => uploadMany([f], "audio")} /></span>
             <SelectedAssets ids={voiceAssets} assets={assets} />
-            <div className="mt-4 flex flex-wrap gap-2 text-xs text-gold-soft"><span className="rounded-full bg-secondary px-3 py-1"><Check className="inline size-3" /> تنقية الضوضاء</span><span className="rounded-full bg-secondary px-3 py-1"><Check className="inline size-3" /> وضوح 100%</span><span className="rounded-full bg-secondary px-3 py-1"><Check className="inline size-3" /> جودة استوديو</span></div>
+            <div className="mt-5 border-t border-border pt-4"><h3 className="mb-3 font-bold">تحسين الصوت بجودة الاستوديو</h3><VoiceEnhancer sourceUrl={sampleUrl} value={fx} onChange={setFx} onSaveFile={async (f) => uploadMany([f], "audio")} /></div>
             <Button className="mt-4 w-full md:w-auto" variant="gold" disabled={busy} onClick={saveVoice}><Sparkles />حفظ الصوت الثابت</Button>
           </section>
           <ProfileGrid items={voices} assets={assets} kind="voice" onDelete={async (id) => { await supabase.from("voice_profiles").delete().eq("id", id); qc.invalidateQueries({ queryKey: ["voice-profiles"] }); }} />

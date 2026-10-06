@@ -4,7 +4,7 @@ import { signedUrl } from "@/lib/media";
 
 export function MediaThumb({ path, kind, className = "" }: { path: string; kind: string; className?: string }) {
   const { data: url } = useQuery({ queryKey: ["signed", path], queryFn: () => signedUrl(path), staleTime: 50 * 60 * 1000 });
-  if (kind === "image") return url ? <img src={url} alt="" className={`object-cover ${className}`} /> : <div className={`bg-secondary ${className}`} />;
+  if (kind === "image") return url ? <img loading="lazy" decoding="async" src={url} alt="" className={`object-cover ${className}`} /> : <div className={`bg-secondary ${className}`} />;
   if (kind === "video") return url ? <video src={url} controls className={`bg-background object-cover ${className}`} /> : <div className={`bg-secondary ${className}`} />;
   if (kind === "audio")
     return (
