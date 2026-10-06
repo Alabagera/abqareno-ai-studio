@@ -36,6 +36,13 @@
       "when": 1791264711847,
       "tag": "0004_model_endpoints",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1791272386192,
+      "tag": "0005_assistant_threads_messages_attachments",
+      "breakpoints": true
     }
   ]
 }
