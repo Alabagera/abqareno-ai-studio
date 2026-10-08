@@ -30,3 +30,7 @@
 - [x] Per-member allowed models; assistant model picker with descriptions and ready templates.
 - [x] Video editor page, studio full-screen preview, open-source video/music/vision/OCR/3D models
 - [x] Editor: voice/script, captions+translation, background/logo/titles, fullscreen side panel, long-press strip reorder, layered audio up to 1000%, PiP, background removal, project library + autosave
+- [ ] Mobile fullscreen icon rail and timeline start controls; two-second reorder.
+- [ ] Phone-compatible export handling, 4K/8K choices and verification.
+- [ ] Prevent paid fallback after open-source models are linked.
+- [ ] Ads workspace: idea, text/image/video, analysis, dimensions, duration and supported sharing.
