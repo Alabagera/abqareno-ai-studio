@@ -1,8 +1,8 @@
 import { useEffect, useRef, useState, type ReactNode } from "react";
 
-// Horizontal clip strip. Tap = select. Press and hold for 3 seconds, then drag
+// Horizontal clip strip. Tap = select. Press and hold for 2 seconds, then drag
 // left/right to move the clip before or after another one.
-const HOLD_MS = 3000;
+const HOLD_MS = 2000;
 
 export function LongPressStrip<T extends { id: string }>({ items, selectedId, onSelect, onReorder, width, render }: {
   items: T[]; selectedId: string | null; onSelect: (id: string) => void; onReorder: (from: number, to: number) => void; width: (item: T) => number; render: (item: T, index: number) => ReactNode;

@@ -1,5 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { authVoice, linkedEndpoint } from "@/lib/voice-backend.server";
+import { authVoice, linkedEndpoint, selfHostedOnly } from "@/lib/voice-backend.server";
 
 // Speech to text. Uses the owner's self-hosted Whisper when linked, otherwise Lovable AI.
 export const Route = createFileRoute("/api/stt")({
@@ -19,7 +19,9 @@ export const Route = createFileRoute("/api/stt")({
         const r = await fetch(`${whisper.url}/asr?${q}`, { method: "POST", body: f, headers: whisper.token ? { Authorization: `Bearer ${whisper.token}` } : {} }).catch(() => null);
         if (r?.ok) { const j = (await r.json()) as { text?: string }; return Response.json({ text: (j.text ?? "").trim(), engine: "whisper" }); }
         console.error("whisper failed", r?.status);
+        return new Response("تعذر الوصول إلى Whisper على سيرفرك؛ لم تُستخدم خدمة مدفوعة.", { status: 502 });
       }
+      if (await selfHostedOnly(auth.sb, auth.userId)) return new Response("اربط Whisper أولًا؛ الخدمات المدفوعة متوقفة لمساحة عملك.", { status: 409 });
       const apiKey = process.env["LOVABLE_API_KEY"];
       if (!apiKey) return new Response("الخدمة غير مهيأة", { status: 500 });
       const f = new FormData();

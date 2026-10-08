@@ -13,6 +13,7 @@ import { Route as IndexRouteImport } from './routes/index'
 import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/route'
 import { Route as AuthRouteImport } from './routes/auth'
 import { Route as ResetPasswordRouteImport } from './routes/reset-password'
+import { Route as AuthenticatedAdsRouteImport } from './routes/_authenticated/ads'
 import { Route as AuthenticatedAssistantRouteImport } from './routes/_authenticated/assistant'
 import { Route as AuthenticatedDashboardRouteImport } from './routes/_authenticated/dashboard'
 import { Route as AuthenticatedEditorRouteImport } from './routes/_authenticated/editor'
@@ -21,6 +22,7 @@ import { Route as AuthenticatedModelsRouteImport } from './routes/_authenticated
 import { Route as AuthenticatedProfilesRouteImport } from './routes/_authenticated/profiles'
 import { Route as AuthenticatedStudioRouteImport } from './routes/_authenticated/studio'
 import { Route as AuthenticatedTeamRouteImport } from './routes/_authenticated/team'
+import { Route as ApiAdsRouteImport } from './routes/api/ads'
 import { Route as ApiAssistantRouteImport } from './routes/api/assistant'
 import { Route as ApiSttRouteImport } from './routes/api/stt'
 import { Route as ApiTranslateRouteImport } from './routes/api/translate'
@@ -46,6 +48,11 @@ const ResetPasswordRoute = ResetPasswordRouteImport.update({
   id: '/reset-password',
   path: '/reset-password',
   getParentRoute: () => rootRouteImport,
+} as any)
+const AuthenticatedAdsRoute = AuthenticatedAdsRouteImport.update({
+  id: '/ads',
+  path: '/ads',
+  getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
 const AuthenticatedAssistantRoute = AuthenticatedAssistantRouteImport.update({
   id: '/assistant',
@@ -87,6 +94,11 @@ const AuthenticatedTeamRoute = AuthenticatedTeamRouteImport.update({
   path: '/team',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
+const ApiAdsRoute = ApiAdsRouteImport.update({
+  id: '/api/ads',
+  path: '/api/ads',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiAssistantRoute = ApiAssistantRouteImport.update({
   id: '/api/assistant',
   path: '/api/assistant',
@@ -124,6 +136,7 @@ export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
   '/reset-password': typeof ResetPasswordRoute
+  '/ads': typeof AuthenticatedAdsRoute
   '/assistant': typeof AuthenticatedAssistantRouteWithChildren
   '/dashboard': typeof AuthenticatedDashboardRoute
   '/editor': typeof AuthenticatedEditorRoute
@@ -132,6 +145,7 @@ export interface FileRoutesByFullPath {
   '/profiles': typeof AuthenticatedProfilesRoute
   '/studio': typeof AuthenticatedStudioRoute
   '/team': typeof AuthenticatedTeamRoute
+  '/api/ads': typeof ApiAdsRoute
   '/api/assistant': typeof ApiAssistantRoute
   '/api/stt': typeof ApiSttRoute
   '/api/translate': typeof ApiTranslateRoute
@@ -143,6 +157,7 @@ export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
   '/reset-password': typeof ResetPasswordRoute
+  '/ads': typeof AuthenticatedAdsRoute
   '/dashboard': typeof AuthenticatedDashboardRoute
   '/editor': typeof AuthenticatedEditorRoute
   '/library': typeof AuthenticatedLibraryRoute
@@ -150,6 +165,7 @@ export interface FileRoutesByTo {
   '/profiles': typeof AuthenticatedProfilesRoute
   '/studio': typeof AuthenticatedStudioRoute
   '/team': typeof AuthenticatedTeamRoute
+  '/api/ads': typeof ApiAdsRoute
   '/api/assistant': typeof ApiAssistantRoute
   '/api/stt': typeof ApiSttRoute
   '/api/translate': typeof ApiTranslateRoute
@@ -163,6 +179,7 @@ export interface FileRoutesById {
   '/_authenticated': typeof AuthenticatedRouteRouteWithChildren
   '/auth': typeof AuthRoute
   '/reset-password': typeof ResetPasswordRoute
+  '/_authenticated/ads': typeof AuthenticatedAdsRoute
   '/_authenticated/assistant': typeof AuthenticatedAssistantRouteWithChildren
   '/_authenticated/dashboard': typeof AuthenticatedDashboardRoute
   '/_authenticated/editor': typeof AuthenticatedEditorRoute
@@ -171,6 +188,7 @@ export interface FileRoutesById {
   '/_authenticated/profiles': typeof AuthenticatedProfilesRoute
   '/_authenticated/studio': typeof AuthenticatedStudioRoute
   '/_authenticated/team': typeof AuthenticatedTeamRoute
+  '/api/ads': typeof ApiAdsRoute
   '/api/assistant': typeof ApiAssistantRoute
   '/api/stt': typeof ApiSttRoute
   '/api/translate': typeof ApiTranslateRoute
@@ -184,6 +202,7 @@ export interface FileRouteTypes {
     | '/'
     | '/auth'
     | '/reset-password'
+    | '/ads'
     | '/assistant'
     | '/dashboard'
     | '/editor'
@@ -192,6 +211,7 @@ export interface FileRouteTypes {
     | '/profiles'
     | '/studio'
     | '/team'
+    | '/api/ads'
     | '/api/assistant'
     | '/api/stt'
     | '/api/translate'
@@ -203,6 +223,7 @@ export interface FileRouteTypes {
     | '/'
     | '/auth'
     | '/reset-password'
+    | '/ads'
     | '/dashboard'
     | '/editor'
     | '/library'
@@ -210,6 +231,7 @@ export interface FileRouteTypes {
     | '/profiles'
     | '/studio'
     | '/team'
+    | '/api/ads'
     | '/api/assistant'
     | '/api/stt'
     | '/api/translate'
@@ -222,6 +244,7 @@ export interface FileRouteTypes {
     | '/_authenticated'
     | '/auth'
     | '/reset-password'
+    | '/_authenticated/ads'
     | '/_authenticated/assistant'
     | '/_authenticated/dashboard'
     | '/_authenticated/editor'
@@ -230,6 +253,7 @@ export interface FileRouteTypes {
     | '/_authenticated/profiles'
     | '/_authenticated/studio'
     | '/_authenticated/team'
+    | '/api/ads'
     | '/api/assistant'
     | '/api/stt'
     | '/api/translate'
@@ -243,6 +267,7 @@ export interface RootRouteChildren {
   AuthenticatedRouteRoute: typeof AuthenticatedRouteRouteWithChildren
   AuthRoute: typeof AuthRoute
   ResetPasswordRoute: typeof ResetPasswordRoute
+  ApiAdsRoute: typeof ApiAdsRoute
   ApiAssistantRoute: typeof ApiAssistantRoute
   ApiSttRoute: typeof ApiSttRoute
   ApiTranslateRoute: typeof ApiTranslateRoute
@@ -278,6 +303,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/reset-password'
       preLoaderRoute: typeof ResetPasswordRouteImport
       parentRoute: typeof rootRouteImport
+    }
+    '/_authenticated/ads': {
+      id: '/_authenticated/ads'
+      path: '/ads'
+      fullPath: '/ads'
+      preLoaderRoute: typeof AuthenticatedAdsRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
     }
     '/_authenticated/assistant': {
       id: '/_authenticated/assistant'
@@ -334,6 +366,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/team'
       preLoaderRoute: typeof AuthenticatedTeamRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/api/ads': {
+      id: '/api/ads'
+      path: '/api/ads'
+      fullPath: '/api/ads'
+      preLoaderRoute: typeof ApiAdsRouteImport
+      parentRoute: typeof rootRouteImport
     }
     '/api/assistant': {
       id: '/api/assistant'
@@ -397,6 +436,7 @@ const AuthenticatedAssistantRouteWithChildren =
   )
 
 interface AuthenticatedRouteRouteChildren {
+  AuthenticatedAdsRoute: typeof AuthenticatedAdsRoute
   AuthenticatedAssistantRoute: typeof AuthenticatedAssistantRouteWithChildren
   AuthenticatedDashboardRoute: typeof AuthenticatedDashboardRoute
   AuthenticatedEditorRoute: typeof AuthenticatedEditorRoute
@@ -408,6 +448,7 @@ interface AuthenticatedRouteRouteChildren {
 }
 
 const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
+  AuthenticatedAdsRoute: AuthenticatedAdsRoute,
   AuthenticatedAssistantRoute: AuthenticatedAssistantRouteWithChildren,
   AuthenticatedDashboardRoute: AuthenticatedDashboardRoute,
   AuthenticatedEditorRoute: AuthenticatedEditorRoute,
@@ -426,6 +467,7 @@ const rootRouteChildren: RootRouteChildren = {
   AuthenticatedRouteRoute: AuthenticatedRouteRouteWithChildren,
   AuthRoute: AuthRoute,
   ResetPasswordRoute: ResetPasswordRoute,
+  ApiAdsRoute: ApiAdsRoute,
   ApiAssistantRoute: ApiAssistantRoute,
   ApiSttRoute: ApiSttRoute,
   ApiTranslateRoute: ApiTranslateRoute,
