@@ -1,7 +1,7 @@
 import { createFileRoute, Link, Outlet, useNavigate, useRouterState } from "@tanstack/react-router";
 import { useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { LayoutDashboard, Clapperboard, FolderOpen, Cpu, LogOut, UserRoundCog, Users, Bot, Film, Megaphone } from "lucide-react";
+import { LayoutDashboard, Clapperboard, FolderOpen, Cpu, LogOut, UserRoundCog, Users, Bot, Film, Megaphone, NotebookPen } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
 import { supabase } from "@/integrations/supabase/client";
 import { Logo } from "@/components/Logo";
@@ -19,6 +19,7 @@ const nav = [
   { to: "/editor", label: "المحرر", icon: Film, permission: "editor" },
   { to: "/assistant", label: "المساعد", icon: Bot, permission: "assistant" },
   { to: "/ads", label: "الإعلانات", icon: Megaphone, permission: "ads" },
+  { to: "/journal", label: "يومياتي", icon: NotebookPen, permission: null },
   { to: "/library", label: "المكتبة", icon: FolderOpen, permission: "library" },
   { to: "/profiles", label: "هويتي", icon: UserRoundCog, permission: "studio" },
   { to: "/team", label: "الفريق", icon: Users, permission: "team" },
