@@ -1,6 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { useEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { toast } from "sonner";
 import { ArrowDown, ArrowUp, Copy, Download, Film, FolderOpen, ImagePlus, Maximize2, Minimize2, Music, Pause, Play, Plus, Scissors, Trash2, Type, Upload, Wand2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
@@ -253,6 +254,7 @@ function Editor() {
   const updText = (id: string, p: Partial<TextItem>) => setTexts((ts) => ts.map((t) => (t.id === id ? { ...t, ...p } : t)));
   useEffect(() => { if (!isPlaying && exporting == null) void seek(Math.min(time, total)); }, [clips, texts, bgColor]); // eslint-disable-line react-hooks/exhaustive-deps
 
+  useEffect(() => { if (!playing.current && exporting == null) { setRes(720); void seek(time); } }, [full]); // eslint-disable-line react-hooks/exhaustive-deps
   const clip = clips.find((c) => c.id === sel);
   const txt = texts.find((t) => t.id === selText);
   const videoModels = [...modelsFor("video"), ...modelsFor("video_edit")];
@@ -262,6 +264,7 @@ function Editor() {
       <PageHeader title="محرر الفيديو" subtitle="اصنع فيديو من الصفر أو عدّل فيديوهاتك وصورك ثم صدّره بالجودة التي تريدها" />
       {music && <audio ref={musicEl} src={music.url} crossOrigin="anonymous" loop className="hidden" />}
 
+      {(() => { const node = (
       <div className={full ? "fixed inset-0 z-50 flex flex-col bg-background p-2" : "glass overflow-hidden rounded-2xl"}>
         <div className="flex flex-wrap items-center gap-2 border-b border-border p-3">
           <select value={sizeId} onChange={(e) => setSizeId(e.target.value)} className="h-9 min-w-[160px] flex-1 rounded-md border border-input bg-background px-2 text-sm sm:max-w-xs">{SOCIAL_SIZES.filter((s) => s.id !== "custom").map((s) => <option key={s.id} value={s.id}>{s.platform} · {s.label} {s.ratio}</option>)}</select>
@@ -281,6 +284,7 @@ function Editor() {
           </div>
         </div>
       </div>
+      ); return full ? createPortal(node, document.body) : node; })()}
 
       <section className="glass space-y-3 rounded-2xl p-4">
         <div className="flex flex-wrap gap-2">
