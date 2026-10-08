@@ -217,6 +217,48 @@ export type Database = {
         }
         Relationships: []
       }
+      journal_tasks: {
+        Row: {
+          created_at: string
+          done: boolean
+          done_at: string | null
+          id: string
+          notes: string
+          remind_at: string | null
+          repeat: string
+          title: string
+          tone: string
+          tone_path: string | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          done?: boolean
+          done_at?: string | null
+          id?: string
+          notes?: string
+          remind_at?: string | null
+          repeat?: string
+          title: string
+          tone?: string
+          tone_path?: string | null
+          user_id?: string
+        }
+        Update: {
+          created_at?: string
+          done?: boolean
+          done_at?: string | null
+          id?: string
+          notes?: string
+          remind_at?: string | null
+          repeat?: string
+          title?: string
+          tone?: string
+          tone_path?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       media_assets: {
         Row: {
           created_at: string

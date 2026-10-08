@@ -57,6 +57,13 @@
       "when": 1791496372571,
       "tag": "0007_personal_workspaces_and_model_managers",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1791499701546,
+      "tag": "0008_journal_tasks",
+      "breakpoints": true
     }
   ]
 }
