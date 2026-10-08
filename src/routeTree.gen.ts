@@ -21,6 +21,7 @@ import { Route as AuthenticatedProfilesRouteImport } from './routes/_authenticat
 import { Route as AuthenticatedStudioRouteImport } from './routes/_authenticated/studio'
 import { Route as AuthenticatedTeamRouteImport } from './routes/_authenticated/team'
 import { Route as ApiAssistantRouteImport } from './routes/api/assistant'
+import { Route as ApiTtsRouteImport } from './routes/api/tts'
 import { Route as AuthenticatedAssistantIndexRouteImport } from './routes/_authenticated/assistant.index'
 import { Route as AuthenticatedAssistantThreadIdRouteImport } from './routes/_authenticated/assistant.$threadId'
 
@@ -83,6 +84,11 @@ const ApiAssistantRoute = ApiAssistantRouteImport.update({
   path: '/api/assistant',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiTtsRoute = ApiTtsRouteImport.update({
+  id: '/api/tts',
+  path: '/api/tts',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const AuthenticatedAssistantIndexRoute =
   AuthenticatedAssistantIndexRouteImport.update({
     id: '/',
@@ -108,6 +114,7 @@ export interface FileRoutesByFullPath {
   '/studio': typeof AuthenticatedStudioRoute
   '/team': typeof AuthenticatedTeamRoute
   '/api/assistant': typeof ApiAssistantRoute
+  '/api/tts': typeof ApiTtsRoute
   '/assistant/$threadId': typeof AuthenticatedAssistantThreadIdRoute
   '/assistant/': typeof AuthenticatedAssistantIndexRoute
 }
@@ -122,6 +129,7 @@ export interface FileRoutesByTo {
   '/studio': typeof AuthenticatedStudioRoute
   '/team': typeof AuthenticatedTeamRoute
   '/api/assistant': typeof ApiAssistantRoute
+  '/api/tts': typeof ApiTtsRoute
   '/assistant/$threadId': typeof AuthenticatedAssistantThreadIdRoute
   '/assistant': typeof AuthenticatedAssistantIndexRoute
 }
@@ -139,6 +147,7 @@ export interface FileRoutesById {
   '/_authenticated/studio': typeof AuthenticatedStudioRoute
   '/_authenticated/team': typeof AuthenticatedTeamRoute
   '/api/assistant': typeof ApiAssistantRoute
+  '/api/tts': typeof ApiTtsRoute
   '/_authenticated/assistant/$threadId': typeof AuthenticatedAssistantThreadIdRoute
   '/_authenticated/assistant/': typeof AuthenticatedAssistantIndexRoute
 }
@@ -156,6 +165,7 @@ export interface FileRouteTypes {
     | '/studio'
     | '/team'
     | '/api/assistant'
+    | '/api/tts'
     | '/assistant/$threadId'
     | '/assistant/'
   fileRoutesByTo: FileRoutesByTo
@@ -170,6 +180,7 @@ export interface FileRouteTypes {
     | '/studio'
     | '/team'
     | '/api/assistant'
+    | '/api/tts'
     | '/assistant/$threadId'
     | '/assistant'
   id:
@@ -186,6 +197,7 @@ export interface FileRouteTypes {
     | '/_authenticated/studio'
     | '/_authenticated/team'
     | '/api/assistant'
+    | '/api/tts'
     | '/_authenticated/assistant/$threadId'
     | '/_authenticated/assistant/'
   fileRoutesById: FileRoutesById
@@ -196,6 +208,7 @@ export interface RootRouteChildren {
   AuthRoute: typeof AuthRoute
   ResetPasswordRoute: typeof ResetPasswordRoute
   ApiAssistantRoute: typeof ApiAssistantRoute
+  ApiTtsRoute: typeof ApiTtsRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -284,6 +297,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiAssistantRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/tts': {
+      id: '/api/tts'
+      path: '/api/tts'
+      fullPath: '/api/tts'
+      preLoaderRoute: typeof ApiTtsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/_authenticated/assistant/': {
       id: '/_authenticated/assistant/'
       path: '/'
@@ -346,6 +366,7 @@ const rootRouteChildren: RootRouteChildren = {
   AuthRoute: AuthRoute,
   ResetPasswordRoute: ResetPasswordRoute,
   ApiAssistantRoute: ApiAssistantRoute,
+  ApiTtsRoute: ApiTtsRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
