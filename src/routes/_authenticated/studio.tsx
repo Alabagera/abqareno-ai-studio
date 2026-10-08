@@ -2,7 +2,7 @@ import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
-import { ImagePlus, Mic, Paperclip, Sparkles, Image as ImageIcon, Stamp, Type, Volume2, Square, Move } from "lucide-react";
+import { ImagePlus, Mic, Paperclip, Sparkles, Image as ImageIcon, Stamp, Type, Volume2, Square, Move, Maximize2, Minimize2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { uploadMedia, signedUrl } from "@/lib/media";
 import { modelsFor } from "@/lib/ai/registry";
@@ -198,12 +198,13 @@ function Studio() {
       <div className="space-y-5">
         <div className="glass overflow-hidden rounded-2xl">
           <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border p-3">
-            <div><h2 className="font-bold">معاينة الفيديو</h2><p className="text-xs text-muted-foreground"><Move className="me-1 inline size-3" />اسحب النصوص لتحديد مكانها</p></div>
+            <div><h2 className="font-bold">معاينة الفيديو <a href="/editor" className="ms-2 text-xs text-gold underline">محرر الفيديو الكامل</a></h2><p className="text-xs text-muted-foreground"><Move className="me-1 inline size-3" />اسحب النصوص لتحديد مكانها</p></div>
             <div className="min-w-[180px] flex-1 sm:max-w-xs"><label className="sr-only" htmlFor="preview-size">مقاس الفيديو</label><select id="preview-size" value={sizeId} onChange={(e) => setSizeId(e.target.value)} className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm">{SOCIAL_SIZES.map((s) => <option key={s.id} value={s.id}>{s.platform} · {s.label} {s.ratio === "custom" ? "" : s.ratio}</option>)}</select></div>
           </div>
           {sizeId === "custom" && <div className="grid grid-cols-2 gap-2 border-b border-border p-3"><label className="text-xs">العرض<Input type="number" value={customW} onChange={(e) => setCustomW(+e.target.value || 1)} /></label><label className="text-xs">الارتفاع<Input type="number" value={customH} onChange={(e) => setCustomH(+e.target.value || 1)} /></label></div>}
-          <div className="flex justify-center bg-muted/40 p-3">
-            <div className="relative w-full overflow-hidden rounded-xl bg-secondary" style={{ aspectRatio: `${w} / ${h}`, maxHeight: "62vh", maxWidth: `calc(62vh * ${w / h})` }}>
+          <div className={full ? "fixed inset-0 z-50 flex items-center justify-center bg-background p-3" : "relative flex justify-center bg-muted/40 p-3"}>
+            <Button size="sm" variant="glass" className="absolute end-3 top-3 z-10" onClick={() => setFull((f) => !f)}>{full ? <Minimize2 className="size-4" /> : <Maximize2 className="size-4" />}{full ? "خروج" : "ملء الشاشة"}</Button>
+            <div className="relative w-full overflow-hidden rounded-xl bg-secondary" style={{ aspectRatio: `${w} / ${h}`, maxHeight: full ? "92vh" : "62vh", maxWidth: `calc(${full ? "92vh" : "62vh"} * ${w / h})` }}>
               {backgroundUrl && <img src={backgroundUrl} alt="الخلفية" className="absolute inset-0 size-full object-cover" />}
               {imageUrl ? <img src={imageUrl} alt="الأفاتار" className={`relative size-full ${backgroundUrl ? "object-contain object-bottom" : "object-cover"}`} /> : <div className="grid size-full place-items-center text-sm text-muted-foreground">معاينة الفيديو</div>}
               {videoTitle && <Movable label="العنوان" pos={titlePos} onChange={setTitlePos}><span dir="auto" className="bilingual-text inline-block max-w-full rounded-lg bg-black/50 px-3 py-1 text-lg font-bold" style={{ fontFamily: `${titleFont}, Noto Sans Arabic, Noto Sans, sans-serif`, color: titleColor }}>{videoTitle}</span></Movable>}
