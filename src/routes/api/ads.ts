@@ -20,13 +20,13 @@ export const Route = createFileRoute("/api/ads")({ server: { handlers: { POST: a
   if (!model) return new Response("اختر نموذجًا مفتوحًا مناسبًا", { status: 400 });
   const { data: access, error: accessError } = await auth.sb.rpc("my_workspace_access");
   const permissions = access as Record<string, unknown> | null;
-  if (accessError || permissions?.studio !== true) return new Response("لا تملك صلاحية الإعلانات", { status: 403 });
-  if (Array.isArray(permissions.allowed_models) && !permissions.allowed_models.includes(model.id)) return new Response("النموذج غير مسموح لحسابك", { status: 403 });
+  if (accessError || permissions?.["studio"] !== true) return new Response("لا تملك صلاحية الإعلانات", { status: 403 });
+  if (Array.isArray(permissions["allowed_models"]) && !permissions["allowed_models"].includes(model.id)) return new Response("النموذج غير مسموح لحسابك", { status: 403 });
   const endpoint = await linkedEndpoint(auth.sb, auth.userId, model.id);
   if (!endpoint) return new Response("اربط هذا النموذج بسيرفرك من صفحة النماذج أولًا. لم تُستخدم خدمة مدفوعة.", { status: 409 });
   if (data.action === "image" && model.id !== "sdxl" && !data.workflow) return new Response("أرفق مخطط ComfyUI بصيغة API لتوليد الصورة بهذا النموذج.", { status: 409 });
   if (data.action === "video" && !data.workflow) return new Response("أرفق مخطط الفيديو من ComfyUI بصيغة API أولًا؛ يجب أن يدعم المدة المختارة.", { status: 409 });
-  const headers = endpoint.token ? { Authorization: `Bearer ${endpoint.token}` } : undefined;
+  const headers: Record<string, string> = endpoint.token ? { Authorization: `Bearer ${endpoint.token}` } : {};
   const enc = new TextEncoder();
   const stream = new ReadableStream<Uint8Array>({ start: async (controller) => {
     let closed = false;
@@ -78,12 +78,13 @@ export const Route = createFileRoute("/api/ads")({ server: { handlers: { POST: a
           const { prompt_id: id } = await submit.json() as { prompt_id?: string };
           if (!id) throw new Error("لم يبدأ النموذج عملية التوليد");
           emit({ type: "progress", text: "جارٍ التوليد على سيرفرك…" });
-          let file: { filename: string; subfolder?: string; type?: string } | undefined;
+          type OutputFile = { filename: string; subfolder?: string; type?: string };
+          let file: OutputFile | undefined;
           while (!file && !request.signal.aborted && !closed) {
             await new Promise((resolve) => setTimeout(resolve, 2000));
             const historyResponse = await fetch(`${endpoint.url}/history/${encodeURIComponent(id)}`, { headers, signal: request.signal });
             if (!historyResponse.ok) throw new Error("تعذر متابعة عملية التوليد");
-            const history = await historyResponse.json() as Record<string, { status?: { status_str?: string }; outputs?: Record<string, { images?: typeof file[]; gifs?: typeof file[]; videos?: typeof file[] }> }>;
+            const history = await historyResponse.json() as Record<string, { status?: { status_str?: string }; outputs?: Record<string, { images?: OutputFile[]; gifs?: OutputFile[]; videos?: OutputFile[] }> }>;
             const job = history[id];
             if (job?.status?.status_str === "error") throw new Error("فشل المخطط على سيرفرك؛ راجع الذاكرة وإعدادات النموذج");
             for (const output of Object.values(job?.outputs ?? {})) {

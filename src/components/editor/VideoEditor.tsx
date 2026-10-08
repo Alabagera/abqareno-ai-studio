@@ -579,7 +579,7 @@ export function VideoEditor({ projectId }: { projectId: string }) {
     await Promise.all([...proj.texts.map((t) => t.font), proj.captionStyle.font, proj.captionStyle.tFont].map((f) => document.fonts.load(`700 20px "${f}"`).catch(() => undefined)));
     await seek(0);
     await mixer.current.resume();
-    stream = c.captureStream(fps); mixer.current.dest.stream.getAudioTracks().forEach((tr) => stream.addTrack(tr));
+    const capture = c.captureStream(fps); stream = capture; mixer.current.dest.stream.getAudioTracks().forEach((tr) => capture.addTrack(tr));
     rec = new MediaRecorder(stream, { mimeType: fmtDef.id, videoBitsPerSecond: q.br, audioBitsPerSecond: 320000 });
     const chunks: Blob[] = []; rec.ondataavailable = (e) => { if (e.data.size) chunks.push(e.data); };
     const recorder = rec;
@@ -885,7 +885,7 @@ export function VideoEditor({ projectId }: { projectId: string }) {
       <select value={proj.sizeId} onChange={(e) => update((p) => ({ ...p, sizeId: e.target.value }))} className="h-8 max-w-[170px] rounded-md border border-input bg-background px-1 text-xs">{SOCIAL_SIZES.filter((s) => s.id !== "custom").map((s) => <option key={s.id} value={s.id}>{s.platform} · {s.label} {s.ratio}</option>)}</select>
       <Button size="sm" variant="ghost" onClick={undo} aria-label="تراجع"><Undo2 className="size-4" /></Button>
       <Button size="sm" variant="ghost" onClick={redo} aria-label="إعادة"><Redo2 className="size-4" /></Button>
-      <Button size="sm" variant="glass" onClick={() => setFull((f) => !f)}>{full ? <Minimize2 className="size-4" /> : <Maximize2 className="size-4" />}{full ? "خروج" : "ملء الشاشة"}</Button>
+      <Button size="sm" variant="glass" onClick={() => { setOpen(new Set()); setFull((f) => !f); }}>{full ? <Minimize2 className="size-4" /> : <Maximize2 className="size-4" />}{full ? "خروج" : "ملء الشاشة"}</Button>
     </div>
   );
 

@@ -39,7 +39,7 @@ function Ads() {
   const [busy, setBusy] = useState(false); const [progress, setProgress] = useState(""); const [error, setError] = useState("");
   const [shareMode, setShareMode] = useState("text"); const abort = useRef<AbortController | null>(null);
   const { data: access } = useQuery({ queryKey: ["workspace-access"], queryFn: async () => (await supabase.rpc("my_workspace_access")).data as Record<string, unknown> | null });
-  const models = AI_MODELS.filter((m) => m.selfHosted && m.task === (action === "text" ? "chat" : action) && (!Array.isArray(access?.allowed_models) || access.allowed_models.includes(m.id)));
+  const models = AI_MODELS.filter((m) => m.selfHosted && m.task === (action === "text" ? "chat" : action) && (!Array.isArray(access?.["allowed_models"]) || access["allowed_models"].includes(m.id)));
   useEffect(() => { if (!models.some((m) => m.id === modelId)) setModelId(models[0]?.id ?? ""); }, [action, access, modelId]); // eslint-disable-line react-hooks/exhaustive-deps
   useEffect(() => () => abort.current?.abort(), []);
   const saveKey = "abq-ads-draft";
@@ -115,7 +115,7 @@ function Ads() {
       const files: File[] = [];
       if (shareMode !== "text") { if (!image) throw new Error("أنشئ صورة أولًا"); files.push(await fileOf(image)); }
       if (shareMode === "video-image") { if (!video) throw new Error("أنشئ فيديو أولًا"); files.push(await fileOf(video)); }
-      const data: ShareData = { title: "إعلان عبقرينو", text: shareMode === "video-image" ? undefined : text, ...(files.length ? { files } : {}) };
+      const data: ShareData = { title: "إعلان عبقرينو", ...(shareMode !== "video-image" ? { text } : {}), ...(files.length ? { files } : {}) };
       if (navigator.share && (!files.length || navigator.canShare?.({ files }))) await navigator.share(data);
       else { toast.info("هذا المتصفح لا يدعم مشاركة الملفات. نزّلها ثم ارفعها إلى التطبيق المطلوب."); if (image && shareMode !== "text") await download(image); if (video && shareMode === "video-image") await download(video); }
     } catch (e) { if ((e as Error).name !== "AbortError") toast.error((e as Error).message); }
@@ -127,7 +127,7 @@ function Ads() {
       <div className="min-w-0 space-y-4">
         <label className="block space-y-2 font-bold">فكرة الإعلان<Textarea aria-label="فكرة الإعلان" dir="auto" value={idea} onChange={(e) => setIdea(e.target.value)} rows={6} placeholder="المنتج أو الخدمة، الجمهور، العرض، الألوان، والأسلوب المطلوب…" /></label>
         <div className="flex gap-1 border-b border-border pb-2" role="tablist" aria-label="نوع الإعلان">{([{ id: "text", label: "نص وتحليل", icon: FileText }, { id: "image", label: "صورة", icon: ImageIcon }, { id: "video", label: "فيديو", icon: Film }] as const).map((tab) => <Button role="tab" aria-selected={action === tab.id} key={tab.id} variant={action === tab.id ? "gold" : "ghost"} size="sm" onClick={() => { setAction(tab.id); setError(""); }} disabled={busy}><tab.icon className="size-4" />{tab.label}</Button>)}</div>
-        <label className="block text-sm">{access?.show_model_names ? "النموذج المفتوح" : "أداة الإنتاج"}<select aria-label="نموذج الإعلان" disabled={busy} value={modelId} onChange={(e) => { setModelId(e.target.value); setWorkflow(undefined); setWorkflowName(""); }} className="mt-1 h-10 w-full rounded-md border border-input bg-background px-2">{models.map((m) => <option key={m.id} value={m.id}>{access?.show_model_names ? m.name : m.description}</option>)}</select></label>
+        <label className="block text-sm">{access?.["show_model_names"] ? "النموذج المفتوح" : "أداة الإنتاج"}<select aria-label="نموذج الإعلان" disabled={busy} value={modelId} onChange={(e) => { setModelId(e.target.value); setWorkflow(undefined); setWorkflowName(""); }} className="mt-1 h-10 w-full rounded-md border border-input bg-background px-2">{models.map((m) => <option key={m.id} value={m.id}>{access?.["show_model_names"] ? m.name : m.description}</option>)}</select></label>
         {selectedModel && <p className="text-xs text-muted-foreground">{selectedModel.description}</p>}
         <label className="block text-sm">مقاس الإعلان<select aria-label="مقاس الإعلان" value={preset} onChange={(e) => { const p = presets.find((p) => p.id === e.target.value); if (p) { setPreset(p.id); setWidth(p.w); setHeight(p.h); } }} className="mt-1 h-10 w-full rounded-md border border-input bg-background px-2">{presets.map((p) => <option key={p.id} value={p.id}>{p.label}</option>)}</select></label>
         <div className="grid grid-cols-2 gap-2"><label className="text-xs">العرض (px)<Input type="number" aria-label="العرض" disabled={preset !== "custom"} min={256} max={4096} value={width} onChange={(e) => setWidth(+e.target.value)} /></label><label className="text-xs">الارتفاع (px)<Input type="number" aria-label="الارتفاع" disabled={preset !== "custom"} min={256} max={4096} value={height} onChange={(e) => setHeight(+e.target.value)} /></label></div>
