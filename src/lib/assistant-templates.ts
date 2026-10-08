@@ -7,6 +7,10 @@ export interface AssistantTemplate { label: string; mode: AssistantMode; modelId
 const G = "openai/gpt-6-astra";
 
 export const ASSISTANT_TEMPLATES: AssistantTemplate[] = [
+  { label: "ملف PDF احترافي", mode: "general", modelId: G, prompt: "أنشئ مستند PDF احترافيًا بألوان أزرق داكن وذهبي عن: " },
+  { label: "عرض PowerPoint", mode: "general", modelId: G, prompt: "أنشئ عرض PowerPoint من 8 شرائح بألوان (اكتب الألوان) عن: " },
+  { label: "ملف Word رسمي", mode: "general", modelId: G, prompt: "اكتب خطابًا/تقريرًا رسميًا بصيغة Word منسقًا عن: " },
+  { label: "جدول Excel", mode: "documents", modelId: G, prompt: "أنشئ جدول Excel منظمًا بالأعمدة والبيانات لـ: " },
   { label: "سكربت فيديو قصير", mode: "general", modelId: G, prompt: "اكتب سكربت فيديو قصير (60 ثانية) جذاب عن: " },
   { label: "إعلان سوشيال", mode: "general", modelId: G, prompt: "اكتب 3 نسخ إعلانية قصيرة لإنستجرام وتيك توك لمنتج: " },
   { label: "مقال احترافي", mode: "general", modelId: "qwen3-32b", prompt: "اكتب مقالًا احترافيًا منظمًا بعناوين عن: " },

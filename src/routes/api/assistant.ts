@@ -81,7 +81,8 @@ export const Route = createFileRoute("/api/assistant")({
     }
     input.push({ role: "user", content: latestContent });
 
-    const systemText = `${MODE_SYSTEM[mode]}\nادعم العربية والإنجليزية والنص المختلط. استخدم Markdown للعناوين والقوائم والجداول والأكواد.`;
+    const systemText = `${MODE_SYSTEM[mode]}\nادعم العربية والإنجليزية والنص المختلط. استخدم Markdown للعناوين والقوائم والجداول والأكواد.
+عندما يطلب المستخدم مستندًا (PDF أو Word أو PowerPoint أو Excel): اكتب محتوى المستند كاملًا ومنسقًا بـ Markdown (عنوان # رئيسي، ## لكل قسم أو شريحة، قوائم نقطية، جداول للبيانات). للعروض اجعل كل ## شريحة بـ 3-6 نقاط قصيرة. لملفات Excel ضع البيانات في جداول Markdown بأرقام صحيحة. إذا طلب ألوانًا أو خطًا معينًا ضع في أول سطر تعليقًا بالشكل <!--theme: primary=#RRGGBB; accent=#RRGGBB; text=#RRGGBB; font=Tajawal--> بالألوان المطلوبة بصيغة hex. لا تشرح طريقة التحويل؛ في النهاية أخبره بسطر واحد أن يضغط زر PDF أو Word أو PowerPoint أو Excel أسفل الرد لتنزيل الملف.`;
     try {
       let upstreamBody: ReadableStream<Uint8Array>;
       if (model.status === "ready") {

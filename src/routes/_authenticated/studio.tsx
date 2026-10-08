@@ -45,7 +45,7 @@ const LANGS = [
   { id: "", l: "بدون ترجمة" }, { id: "en", l: "الإنجليزية" }, { id: "fr", l: "الفرنسية" }, { id: "tr", l: "التركية" },
   { id: "es", l: "الإسبانية" }, { id: "de", l: "الألمانية" }, { id: "ur", l: "الأردية" }, { id: "id", l: "الإندونيسية" },
 ];
-type OverlayPosition = { x: number; y: number };
+type OverlayPosition = { x: number; y: number; s?: number; w?: number };
 
 function Studio() {
   const qc = useQueryClient();
@@ -324,13 +324,71 @@ function Card({ n, t, children }: { n: string; t: string; children: React.ReactN
 }
 
 function Movable({ label, pos, onChange, children }: { label: string; pos: OverlayPosition; onChange: (p: OverlayPosition) => void; children: React.ReactNode }) {
-  return <div role="button" tabIndex={0} aria-label={`حرّك ${label}`} title={`اسحب لتحريك ${label}`} className="absolute z-20 max-w-[90%] cursor-move select-none text-center outline-none ring-primary focus-visible:ring-2" style={{ left: `${pos.x * 100}%`, top: `${pos.y * 100}%`, transform: "translate(-50%, -50%)", touchAction: "none" }} onPointerDown={(e) => e.currentTarget.setPointerCapture(e.pointerId)} onPointerMove={(e) => {
-    if (!e.currentTarget.hasPointerCapture(e.pointerId)) return;
-    const parent = e.currentTarget.parentElement;
-    if (!parent) return;
-    const r = parent.getBoundingClientRect();
-    onChange({ x: Math.min(0.94, Math.max(0.06, (e.clientX - r.left) / r.width)), y: Math.min(0.94, Math.max(0.06, (e.clientY - r.top) / r.height)) });
-  }}>{children}</div>;
+  const ref = useRef<HTMLDivElement>(null);
+  const [active, setActive] = useState(false);
+  const [guides, setGuides] = useState({ v: false, h: false });
+  const drag = useRef<{ mode: "move" | "scale" | "width"; sx: number; sy: number; start: OverlayPosition; rw: number; rh: number } | null>(null);
+  const scale = pos.s ?? 1;
+  const width = pos.w;
+  const clamp = (v: number, a: number, b: number) => Math.min(b, Math.max(a, v));
+  useEffect(() => {
+    if (!active) return;
+    const off = (e: PointerEvent) => { if (!ref.current?.contains(e.target as Node)) setActive(false); };
+    document.addEventListener("pointerdown", off);
+    return () => document.removeEventListener("pointerdown", off);
+  }, [active]);
+  function begin(mode: "move" | "scale" | "width", e: React.PointerEvent) {
+    e.stopPropagation(); setActive(true);
+    const r = ref.current?.parentElement?.getBoundingClientRect(); if (!r) return;
+    (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
+    drag.current = { mode, sx: e.clientX, sy: e.clientY, start: pos, rw: r.width, rh: r.height };
+  }
+  function move(e: React.PointerEvent) {
+    const d = drag.current; if (!d) return;
+    const dx = (e.clientX - d.sx) / d.rw, dy = (e.clientY - d.sy) / d.rh;
+    if (d.mode === "move") {
+      let x = clamp(d.start.x + dx, 0.02, 0.98), y = clamp(d.start.y + dy, 0.02, 0.98);
+      const v = Math.abs(x - 0.5) < 0.015, h = Math.abs(y - 0.5) < 0.015;
+      if (v) x = 0.5; if (h) y = 0.5;
+      setGuides({ v, h });
+      onChange({ ...pos, x: Math.round(x * 1000) / 1000, y: Math.round(y * 1000) / 1000 });
+    } else if (d.mode === "scale") onChange({ ...pos, s: Math.round(clamp((d.start.s ?? 1) + (dx + dy) * 2.5, 0.4, 3) * 100) / 100 });
+    else onChange({ ...pos, w: Math.round(clamp((d.start.w ?? 0.8) + Math.abs(dx) * 2 * Math.sign(dx || 1), 0.15, 1) * 100) / 100 });
+  }
+  function end() { drag.current = null; setGuides({ v: false, h: false }); }
+  function key(e: React.KeyboardEvent) {
+    const step = e.shiftKey ? 0.01 : 0.002;
+    const m: Record<string, [number, number]> = { ArrowLeft: [-step, 0], ArrowRight: [step, 0], ArrowUp: [0, -step], ArrowDown: [0, step] };
+    const k = m[e.key]; if (!k) return; e.preventDefault();
+    onChange({ ...pos, x: clamp(pos.x + k[0], 0.02, 0.98), y: clamp(pos.y + k[1], 0.02, 0.98) });
+  }
+  const nudge = (dx: number, dy: number) => onChange({ ...pos, x: clamp(pos.x + dx, 0.02, 0.98), y: clamp(pos.y + dy, 0.02, 0.98) });
+  return <>
+    {guides.v && <div className="pointer-events-none absolute inset-y-0 left-1/2 z-10 w-px bg-gold" />}
+    {guides.h && <div className="pointer-events-none absolute inset-x-0 top-1/2 z-10 h-px bg-gold" />}
+    <div ref={ref} role="button" tabIndex={0} aria-label={`حرّك ${label}`} title={`اسحب لتحريك ${label} — الأسهم للتحريك الدقيق`} onKeyDown={key} onFocus={() => setActive(true)}
+      className={`absolute z-20 cursor-move select-none text-center outline-none ${active ? "ring-2 ring-gold ring-offset-1 ring-offset-transparent" : "hover:ring-1 hover:ring-gold/60"} rounded-lg`}
+      style={{ left: `${pos.x * 100}%`, top: `${pos.y * 100}%`, width: width ? `${width * 100}%` : undefined, maxWidth: width ? undefined : "90%", transform: `translate(-50%, -50%) scale(${scale})`, transformOrigin: "center", touchAction: "none" }}
+      onPointerDown={(e) => begin("move", e)} onPointerMove={move} onPointerUp={end} onPointerCancel={end}>
+      {children}
+      {active && <>
+        <span onPointerDown={(e) => begin("scale", e)} onPointerMove={move} onPointerUp={end} className="absolute -bottom-2 -right-2 size-4 cursor-nwse-resize rounded-full border-2 border-background bg-gold shadow" aria-label="تكبير وتصغير" style={{ transform: `scale(${1 / scale})` }} />
+        <span onPointerDown={(e) => begin("width", e)} onPointerMove={move} onPointerUp={end} className="absolute -right-2 top-1/2 h-6 w-2.5 cursor-ew-resize rounded-full border border-background bg-gold-soft shadow" aria-label="توسيع المربع" style={{ transform: `translateY(-50%) scale(${1 / scale})` }} />
+        <div onPointerDown={(e) => e.stopPropagation()} dir="ltr" className="absolute left-1/2 top-full z-30 mt-2 flex items-center gap-1 whitespace-nowrap rounded-lg border border-border bg-background/95 p-1 text-[10px] text-foreground shadow-lg" style={{ transform: `translateX(-50%) scale(${1 / scale})`, transformOrigin: "top center" }}>
+          <button type="button" className="rounded bg-secondary px-1.5" onClick={() => nudge(-0.005, 0)}>←</button>
+          <button type="button" className="rounded bg-secondary px-1.5" onClick={() => nudge(0, -0.005)}>↑</button>
+          <button type="button" className="rounded bg-secondary px-1.5" onClick={() => nudge(0, 0.005)}>↓</button>
+          <button type="button" className="rounded bg-secondary px-1.5" onClick={() => nudge(0.005, 0)}>→</button>
+          <label className="flex items-center gap-0.5">X<input type="number" step={0.1} value={(pos.x * 100).toFixed(1)} onChange={(e) => onChange({ ...pos, x: clamp(+e.target.value / 100, 0.02, 0.98) })} className="w-12 rounded bg-secondary px-1" /></label>
+          <label className="flex items-center gap-0.5">Y<input type="number" step={0.1} value={(pos.y * 100).toFixed(1)} onChange={(e) => onChange({ ...pos, y: clamp(+e.target.value / 100, 0.02, 0.98) })} className="w-12 rounded bg-secondary px-1" /></label>
+          <button type="button" className="rounded bg-secondary px-1.5" onClick={() => onChange({ ...pos, s: clamp(scale - 0.1, 0.4, 3) })}>−</button>
+          <span>{Math.round(scale * 100)}%</span>
+          <button type="button" className="rounded bg-secondary px-1.5" onClick={() => onChange({ ...pos, s: clamp(scale + 0.1, 0.4, 3) })}>+</button>
+          <button type="button" className="rounded bg-secondary px-1.5" onClick={() => onChange({ ...pos, x: 0.5 })}>توسيط</button>
+        </div>
+      </>}
+    </div>
+  </>;
 }
 
 function Seg({ active, onClick, children }: { active: boolean; onClick: () => void; children: React.ReactNode }) {
