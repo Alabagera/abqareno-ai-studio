@@ -11,8 +11,8 @@ export async function phoneMp4(blob: Blob, onProgress: (value: number) => void) 
     const output = new Output({ format: new Mp4OutputFormat({ fastStart: "in-memory" }), target });
     const conversion = await Conversion.init({ input, output, video: { codec: "avc" }, audio: { codec: "aac", bitrate: 192000 } });
     if (!conversion.isValid || conversion.discardedTracks.length) {
-      console.warn("MP4 conversion unsupported", conversion.discardedTracks.map((track) => track.reason));
-      throw new Error("هذا الجهاز لا يدعم تحويل الفيديو والصوت إلى MP4 بهذه الجودة. جرّب 720p أو جهازًا أحدث.");
+      const { softwareMp4 } = await import("./phone-export-fallback");
+      return softwareMp4(blob, onProgress);
     }
     conversion.onProgress = (progress) => onProgress(progress);
     await conversion.execute();
