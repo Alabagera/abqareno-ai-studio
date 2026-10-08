@@ -32,7 +32,7 @@ interface HitRect { type: SelType; id: string; x: number; y: number; w: number; 
 type Target = "main" | "overlay" | "audio" | "bg" | "logo";
 type MediaEl = HTMLVideoElement | HTMLImageElement | HTMLAudioElement;
 
-const QUALITIES = [{ id: 480, label: "480p (خفيف)", br: 2.5e6 }, { id: 720, label: "720p HD", br: 6e6 }, { id: 1080, label: "1080p Full HD", br: 12e6 }, { id: 1440, label: "1440p 2K", br: 20e6 }, { id: 2160, label: "2160p 4K", br: 40e6 }];
+const QUALITIES = [{ id: 480, label: "480p (خفيف)", br: 2.5e6 }, { id: 720, label: "720p HD", br: 6e6 }, { id: 1080, label: "1080p Full HD", br: 12e6 }, { id: 1440, label: "1440p 2K", br: 20e6 }, { id: 2160, label: "2160p 4K", br: 40e6 }, { id: 4320, label: "4320p 8K (جهاز قوي)", br: 80e6 }];
 const FORMATS = [
   { id: "video/mp4;codecs=avc1.42E01E,mp4a.40.2", label: "MP4 (H.264) — الأكثر توافقًا", ext: "mp4" }, { id: "video/mp4", label: "MP4", ext: "mp4" },
   { id: "video/webm;codecs=vp9,opus", label: "WebM (VP9) — جودة عالية وحجم أصغر", ext: "webm" }, { id: "video/webm;codecs=vp8,opus", label: "WebM (VP8)", ext: "webm" }, { id: "video/webm", label: "WebM", ext: "webm" },
@@ -115,7 +115,7 @@ export function VideoEditor({ projectId }: { projectId: string }) {
   const [open, setOpen] = useState<Set<string>>(new Set(["media"]));
   const [quality, setQuality] = useState(1080);
   const [fps, setFps] = useState(30);
-  const [format, setFormat] = useState("");
+  const [format, setFormat] = useState("phone-mp4");
   const [exporting, setExporting] = useState<number | null>(null);
   const [result, setResult] = useState<{ url: string; blob: Blob; name: string } | null>(null);
   const [libTarget, setLibTarget] = useState<Target | null>(null);
@@ -133,7 +133,7 @@ export function VideoEditor({ projectId }: { projectId: string }) {
   useEffect(() => { if (!format && supported[0]) setFormat(supported[0].id); }, [supported, format]);
 
   const update = useCallback((fn: (p: Project) => Project) => setProj((p) => fn(p)), []);
-  const toggle = (k: string, force?: boolean) => setOpen((s) => { const n = new Set(s); if (force ?? !n.has(k)) n.add(k); else n.delete(k); return n; });
+  const toggle = (k: string, force?: boolean) => setOpen((s) => { const n = new Set(full ? [] : s); if (force ?? !n.has(k)) n.add(k); else n.delete(k); return n; });
 
   // ---------- load & resolve private media links ----------
   useEffect(() => {
@@ -567,27 +567,37 @@ export function VideoEditor({ projectId }: { projectId: string }) {
   // ---------- export ----------
   async function exportVideo() {
     if (total <= 0) { toast.error("أضف مقاطع أولًا"); return; }
-    const fmtDef = FORMATS.find((f) => f.id === format); if (!fmtDef) { toast.error("المتصفح لا يدعم التصدير، جرّب Chrome"); return; }
-    const c = canvasRef.current!; const q = QUALITIES.find((x) => x.id === quality)!;
+    const phone = format === "phone-mp4";
+    const fmtDef = phone ? supported[0] : FORMATS.find((f) => f.id === format); if (!fmtDef) { toast.error("المتصفح لا يدعم التصدير، جرّب Chrome"); return; }
+    const c = canvasRef.current; const q = QUALITIES.find((x) => x.id === quality);
+    if (!c || !q) return;
+    let stream: MediaStream | undefined; let rec: MediaRecorder | undefined;
+    try {
     playing.current = false; await frame();
     setExporting(0); setResult(null); setRes(quality);
     if (!mixer.current) mixer.current = new Mixer();
     await Promise.all([...proj.texts.map((t) => t.font), proj.captionStyle.font, proj.captionStyle.tFont].map((f) => document.fonts.load(`700 20px "${f}"`).catch(() => undefined)));
     await seek(0);
-    const stream = c.captureStream(fps); mixer.current.dest.stream.getAudioTracks().forEach((tr) => stream.addTrack(tr));
-    const rec = new MediaRecorder(stream, { mimeType: fmtDef.id, videoBitsPerSecond: q.br, audioBitsPerSecond: 320000 });
+    await mixer.current.resume();
+    stream = c.captureStream(fps); mixer.current.dest.stream.getAudioTracks().forEach((tr) => stream.addTrack(tr));
+    rec = new MediaRecorder(stream, { mimeType: fmtDef.id, videoBitsPerSecond: q.br, audioBitsPerSecond: 320000 });
     const chunks: Blob[] = []; rec.ondataavailable = (e) => { if (e.data.size) chunks.push(e.data); };
-    const stopped = new Promise<void>((r) => (rec.onstop = () => r()));
+    const recorder = rec;
+    const stopped = new Promise<void>((resolve, reject) => { recorder.onstop = () => resolve(); recorder.onerror = () => reject(new Error("تعذر تسجيل هذه الجودة؛ جرّب 720p أو جهازًا أقوى")); });
     rec.start(500);
     const ok = await run(0, (t) => setExporting(Math.min(99, Math.round((t / total) * 100))));
     rec.stop(); await stopped; stream.getVideoTracks().forEach((t) => t.stop());
     // Thumbnail from the first second.
     await seek(Math.min(1, total / 2));
     const thumb = await new Promise<Blob | null>((r) => c.toBlob(r, "image/jpeg", 0.8));
-    setExporting(null); setRes(720); void seek(0);
+    setRes(720); void seek(0);
     if (!ok) { toast("أُلغي التصدير"); return; }
-    const blob = new Blob(chunks, { type: fmtDef.id.split(";")[0] ?? "video/webm" });
-    const name = `${title || "abqarino"}-${quality}p.${fmtDef.ext}`;
+    let blob = new Blob(chunks, { type: recorder.mimeType.split(";")[0] ?? "video/webm" });
+    if (phone) {
+      const { phoneMp4 } = await import("@/lib/editor/phone-export");
+      blob = await phoneMp4(blob, (v) => setExporting(Math.round(v * 100)));
+    }
+    const name = `${title || "abqarino"}-${quality}p.${phone ? "mp4" : fmtDef.ext}`;
     setResult({ url: URL.createObjectURL(blob), blob, name });
     toast.success("الفيديو جاهز");
     try {
@@ -598,6 +608,8 @@ export function VideoEditor({ projectId }: { projectId: string }) {
       await saveProject(projectId, title, projRef.current, total, extra);
       if (extra.export_path) toast.success("حُفظ الفيديو في مكتبة المحرر");
     } catch (e) { toast.error((e as Error).message); }
+    } catch (e) { toast.error((e as Error).message || "تعذر التصدير؛ جرّب جودة أقل"); }
+    finally { if (rec?.state === "recording") rec.stop(); stream?.getVideoTracks().forEach((track) => track.stop()); playing.current = false; pauseAll(); setIsPlaying(false); setExporting(null); setRes(720); }
   }
 
   // ---------- canvas direct manipulation ----------
@@ -847,14 +859,14 @@ export function VideoEditor({ projectId }: { projectId: string }) {
 
       <Section title="التصدير والحفظ" icon={<Download className="size-4" />} open={open.has("export")} onToggle={() => toggle("export")}>
         <div className="grid grid-cols-2 gap-2">
-          <Sel label="الصيغة" value={format} onChange={setFormat} options={supported.length ? supported.map((f) => ({ id: f.id, label: f.label })) : [{ id: "", label: "غير مدعوم في هذا المتصفح" }]} />
+          <Sel label="الصيغة" value={format} onChange={setFormat} options={supported.length ? [{ id: "phone-mp4", label: "MP4 للهاتف — H.264 + AAC" }, ...supported.map((f) => ({ id: f.id, label: f.label }))] : [{ id: "", label: "غير مدعوم في هذا المتصفح" }]} />
           <Sel label="الجودة" value={String(quality)} onChange={(v) => setQuality(+v)} options={QUALITIES.map((q) => ({ id: String(q.id), label: q.label }))} />
           <Sel label="الإطارات في الثانية" value={String(fps)} onChange={(v) => setFps(+v)} options={[24, 25, 30, 60].map((f) => ({ id: String(f), label: `${f} fps` }))} />
         </div>
-        <p className="text-muted-foreground">الصوت يُصدَّر بجودة 48 كيلوهرتز و320 كيلوبت. أبقِ الصفحة مفتوحة حتى ينتهي التصدير. الفيديو يُحفظ في مكتبة المحرر تلقائيًا.</p>
+        <p className="text-muted-foreground">MP4 للهاتف يستخدم H.264 وAAC. جودات 4K و8K تحتاج جهازًا قويًا ومتصفحًا يدعم ترميزها؛ زيادة الدقة لا تضيف تفاصيل للمصدر. حد الحفظ 20 ميجابايت.</p>
         {exporting != null ? <div className="space-y-2"><div className="h-2 overflow-hidden rounded bg-secondary"><div className="h-full bg-gold transition-all" style={{ width: `${exporting}%` }} /></div><Button size="sm" variant="glass" onClick={() => (playing.current = false)}>إلغاء ({exporting}%)</Button></div>
           : <Button variant="gold" className="w-full" onClick={() => void exportVideo()}><Download className="size-4" />تصدير الفيديو</Button>}
-        {result && <div className="space-y-2 rounded-xl border border-gold/40 p-2"><video src={result.url} controls className="max-h-56 w-full rounded-lg bg-black" /><a href={result.url} download={result.name} className="inline-flex items-center gap-2 rounded-md bg-gold px-3 py-2 font-bold text-primary-foreground"><Download className="size-4" />تنزيل ({(result.blob.size / 1048576).toFixed(1)} م.ب)</a></div>}
+        {result && <div className="space-y-2 rounded-xl border border-gold/40 p-2"><video src={result.url} playsInline controls className="max-h-56 w-full rounded-lg bg-black" /><a href={result.url} download={result.name} className="inline-flex items-center gap-2 rounded-md bg-gold px-3 py-2 font-bold text-primary-foreground"><Download className="size-4" />تنزيل ({(result.blob.size / 1048576).toFixed(1)} م.ب)</a></div>}
         <Button size="sm" variant="ghost" onClick={snapshot}><ImageIcon className="size-3" />حفظ لقطة من الإطار الحالي (PNG)</Button>
       </Section>
 
@@ -877,7 +889,7 @@ export function VideoEditor({ projectId }: { projectId: string }) {
     </div>
   );
 
-  const viewerMax = full ? "calc(100dvh - 290px)" : "58vh";
+  const viewerMax = full ? "calc(100dvh - 250px)" : "58vh";
   const viewer = (
     <div className="flex min-h-0 min-w-0 flex-1 flex-col">
       <div className="flex flex-1 items-center justify-center bg-muted/40 p-2">
@@ -900,12 +912,17 @@ export function VideoEditor({ projectId }: { projectId: string }) {
 
   const strip = (
     <div className="space-y-1 border-t border-border p-2" dir="rtl">
-      <div className="flex items-center gap-2 text-[11px] text-muted-foreground"><ArrowLeftRight className="size-3" />اضغط مطولًا 3 ثوانٍ على أي مقطع ثم اسحبه لتغيير مكانه · الطول الكلي {fmt(mainLen(proj))}</div>
+      <div className="flex items-center gap-2 text-[11px] text-muted-foreground"><ArrowLeftRight className="size-3" />المقاطع · الطول الكلي {fmt(mainLen(proj))}</div>
       {proj.clips.length === 0 ? <p className="py-3 text-center text-xs text-muted-foreground">أضف فيديوهات أو صورًا لتظهر هنا</p> : (
         <LongPressStrip items={proj.clips} selectedId={sel?.type === "clip" ? sel.id : null} onReorder={reorder} width={(c) => Math.max(76, Math.min(240, clipLen(c) * 16))}
           onSelect={(id) => { setSel({ type: "clip", id }); if (!playing.current) void seek(startOf(id) + 0.01); }}
           render={(c, i) => <ClipChip clip={c} index={i} />} />
       )}
+      {(selAud || selOv || selText || selClip) && <div className="flex flex-wrap items-center gap-2 text-xs" dir="rtl">
+        <span>بداية العنصر المحدد (ثانية)</span>
+        {selClip ? <span className="font-mono" dir="ltr">{startOf(selClip.id).toFixed(2)}</span> : <input aria-label="بداية العنصر المحدد" type="number" min={0} step={0.01} value={selAud?.start ?? selOv?.start ?? selText?.start ?? 0} onChange={(e) => { const start = Math.max(0, +e.target.value); if (selAud) updAud(selAud.id, { start }); else if (selOv) updOv(selOv.id, { start }); else if (selText) updText(selText.id, { start, end: start + (selText.end - selText.start) }); }} className="h-8 w-20 rounded border border-input bg-background px-2" />}
+        {!selClip && <Button variant="ghost" size="sm" onClick={() => { if (selAud) updAud(selAud.id, { start: time }); else if (selOv) updOv(selOv.id, { start: time }); else if (selText) updText(selText.id, { start: time, end: time + selText.end - selText.start }); }}>عند المؤشر</Button>}
+      </div>}
       {(proj.overlays.length > 0 || proj.audios.length > 0 || proj.texts.length > 0) && (
         <div className="flex gap-1.5 overflow-x-auto" dir="ltr">
           {proj.overlays.map((o, i) => <Chip key={o.id} active={sel?.id === o.id} onClick={() => { setSel({ type: "overlay", id: o.id }); toggle("pip", true); }} icon={<Layers className="size-3" />} label={`طبقة ${i + 1}`} sub={`${o.start.toFixed(1)}s`} />)}
@@ -932,13 +949,12 @@ export function VideoEditor({ projectId }: { projectId: string }) {
   );
 
   const body = full ? (
-    <div className="fixed inset-0 z-50 flex flex-col bg-background">
+    <div className="editor-fullscreen fixed inset-0 z-50 flex flex-col bg-background">
       {toolbar}
-      <div className="flex min-h-0 flex-1 flex-col md:flex-row" dir="ltr">
-        {viewer}
-        <aside className="max-h-[42vh] w-full overflow-y-auto border-t border-border p-2 md:max-h-none md:w-[380px] md:border-s md:border-t-0">{panel}</aside>
+      <div className="flex min-h-0 flex-1 flex-row" dir="ltr">
+        <div className="flex min-w-0 flex-1 flex-col">{viewer}{strip}</div>
+        <aside className="editor-icon-rail relative w-14 shrink-0 overflow-y-auto border-s border-border p-1 sm:w-16">{panel}</aside>
       </div>
-      {strip}
     </div>
   ) : (
     <div className="glass overflow-hidden rounded-2xl">
