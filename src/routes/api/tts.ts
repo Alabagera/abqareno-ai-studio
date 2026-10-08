@@ -1,5 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { createClient } from "@supabase/supabase-js";
+import { authVoice, linkedEndpoint } from "@/lib/voice-backend.server";
 import { z } from "zod";
 
 // Professional spoken replies for the voice chat. Returns a complete WAV clip.
@@ -8,17 +8,19 @@ const body = z.object({ text: z.string().trim().min(1).max(1500), voice: z.strin
 export const Route = createFileRoute("/api/tts")({
   server: { handlers: { POST: async ({ request }) => {
     const apiKey = process.env["LOVABLE_API_KEY"];
-    const url = process.env["SUPABASE_URL"];
-    const key = process.env["SUPABASE_PUBLISHABLE_KEY"];
-    if (!apiKey || !url || !key) return new Response("الخدمة غير مهيأة", { status: 500 });
-    const token = (request.headers.get("authorization") ?? "").replace(/^Bearer\s+/i, "");
-    if (token.split(".").length !== 3) return new Response("يلزم تسجيل الدخول", { status: 401 });
-    const sb = createClient(url, key, { auth: { persistSession: false, autoRefreshToken: false } });
-    const { data, error } = await sb.auth.getUser(token);
-    if (error || !data.user) return new Response("يلزم تسجيل الدخول", { status: 401 });
+    const auth = await authVoice(request);
+    if (!auth) return new Response("يلزم تسجيل الدخول", { status: 401 });
     const parsed = body.safeParse(await request.json().catch(() => null));
     if (!parsed.success) return new Response("نص غير صالح", { status: 400 });
     const isAr = /[\u0600-\u06FF]/.test(parsed.data.text);
+    // Self-hosted XTTS-v2 replaces the paid voice automatically once linked.
+    const xtts = await linkedEndpoint(auth.sb, auth.userId, "xtts-v2");
+    if (xtts) {
+      const r = await fetch(`${xtts.url}/tts_to_audio/`, { method: "POST", headers: { "Content-Type": "application/json", ...(xtts.token ? { Authorization: `Bearer ${xtts.token}` } : {}) }, body: JSON.stringify({ text: parsed.data.text, speaker_wav: "abqarino", language: isAr ? "ar" : "en" }) }).catch(() => null);
+      if (r?.ok && r.body) return new Response(r.body, { headers: { "Content-Type": r.headers.get("content-type") ?? "audio/wav", "Cache-Control": "no-cache", "X-Voice-Engine": "xtts" } });
+      console.error("xtts failed", r?.status);
+    }
+    if (!apiKey) return new Response("الخدمة غير مهيأة", { status: 500 });
     const styled = isAr
       ? `اقرأ النص التالي بصوت إذاعي واضح وقوي ودافئ، بنطق عربي فصيح وسليم وإيقاع طبيعي: ${parsed.data.text}`
       : `Say in a clear, warm, confident studio narrator voice: ${parsed.data.text}`;

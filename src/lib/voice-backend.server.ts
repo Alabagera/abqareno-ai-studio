@@ -1,4 +1,4 @@
-import { createClient } from "@supabase/supabase-js";
+import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 
 // Shared server helpers for voice: verify the caller and find the workspace's
 // linked self-hosted model (which replaces the paid gateway automatically).
@@ -13,7 +13,7 @@ export async function authVoice(request: Request) {
   return { sb, userId: data.user.id };
 }
 
-export async function linkedEndpoint(sb: Awaited<ReturnType<typeof authVoice>> extends infer T ? T extends { sb: infer S } ? S : never : never, userId: string, modelId: string) {
+export async function linkedEndpoint(sb: SupabaseClient, userId: string, modelId: string) {
   const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
   const { data: ownerId } = await sb.rpc("workspace_owner_id", { _user_id: userId });
   if (!ownerId) return null;
