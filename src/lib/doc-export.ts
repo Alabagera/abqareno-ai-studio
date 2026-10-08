@@ -172,3 +172,15 @@ export function downloadCode(text: string, lang: string) {
   const ext: Record<string, string> = { javascript: "js", js: "js", typescript: "ts", ts: "ts", tsx: "tsx", jsx: "jsx", python: "py", py: "py", html: "html", css: "css", json: "json", bash: "sh", sh: "sh", sql: "sql", markdown: "md", md: "md", java: "java", csharp: "cs", cpp: "cpp", c: "c", php: "php", dart: "dart", kotlin: "kt", swift: "swift", go: "go", yaml: "yml" };
   save(new Blob([text], { type: "text/plain;charset=utf-8" }), `code.${ext[lang.toLowerCase()] ?? "txt"}`);
 }
+
+export function tableRows(table: HTMLTableElement) {
+  return Array.from(table.rows).map((r) => Array.from(r.cells).map((c) => c.innerText.trim()));
+}
+export function downloadTableCsv(rows: string[][]) {
+  const csv = "\uFEFF" + rows.map((r) => r.map((c) => `"${c.replace(/"/g, '""')}"`).join(",")).join("\n");
+  save(new Blob([csv], { type: "text/csv;charset=utf-8" }), "جدول.csv");
+}
+export async function downloadTableXlsx(rows: string[][]) {
+  const md = rows.length ? `| ${rows[0]!.join(" | ")} |\n| ${rows[0]!.map(() => "---").join(" | ")} |\n${rows.slice(1).map((r) => `| ${r.join(" | ")} |`).join("\n")}` : "";
+  await exportDocument(md, "xlsx", "جدول");
+}
