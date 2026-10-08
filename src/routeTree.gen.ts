@@ -17,6 +17,7 @@ import { Route as AuthenticatedAdsRouteImport } from './routes/_authenticated/ad
 import { Route as AuthenticatedAssistantRouteImport } from './routes/_authenticated/assistant'
 import { Route as AuthenticatedDashboardRouteImport } from './routes/_authenticated/dashboard'
 import { Route as AuthenticatedEditorRouteImport } from './routes/_authenticated/editor'
+import { Route as AuthenticatedJournalRouteImport } from './routes/_authenticated/journal'
 import { Route as AuthenticatedLibraryRouteImport } from './routes/_authenticated/library'
 import { Route as AuthenticatedModelsRouteImport } from './routes/_authenticated/models'
 import { Route as AuthenticatedProfilesRouteImport } from './routes/_authenticated/profiles'
@@ -24,6 +25,7 @@ import { Route as AuthenticatedStudioRouteImport } from './routes/_authenticated
 import { Route as AuthenticatedTeamRouteImport } from './routes/_authenticated/team'
 import { Route as ApiAdsRouteImport } from './routes/api/ads'
 import { Route as ApiAssistantRouteImport } from './routes/api/assistant'
+import { Route as ApiEditorAiRouteImport } from './routes/api/editor-ai'
 import { Route as ApiSttRouteImport } from './routes/api/stt'
 import { Route as ApiTranslateRouteImport } from './routes/api/translate'
 import { Route as ApiTtsRouteImport } from './routes/api/tts'
@@ -69,6 +71,11 @@ const AuthenticatedEditorRoute = AuthenticatedEditorRouteImport.update({
   path: '/editor',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
+const AuthenticatedJournalRoute = AuthenticatedJournalRouteImport.update({
+  id: '/journal',
+  path: '/journal',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
 const AuthenticatedLibraryRoute = AuthenticatedLibraryRouteImport.update({
   id: '/library',
   path: '/library',
@@ -102,6 +109,11 @@ const ApiAdsRoute = ApiAdsRouteImport.update({
 const ApiAssistantRoute = ApiAssistantRouteImport.update({
   id: '/api/assistant',
   path: '/api/assistant',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiEditorAiRoute = ApiEditorAiRouteImport.update({
+  id: '/api/editor-ai',
+  path: '/api/editor-ai',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ApiSttRoute = ApiSttRouteImport.update({
@@ -140,6 +152,7 @@ export interface FileRoutesByFullPath {
   '/assistant': typeof AuthenticatedAssistantRouteWithChildren
   '/dashboard': typeof AuthenticatedDashboardRoute
   '/editor': typeof AuthenticatedEditorRoute
+  '/journal': typeof AuthenticatedJournalRoute
   '/library': typeof AuthenticatedLibraryRoute
   '/models': typeof AuthenticatedModelsRoute
   '/profiles': typeof AuthenticatedProfilesRoute
@@ -147,6 +160,7 @@ export interface FileRoutesByFullPath {
   '/team': typeof AuthenticatedTeamRoute
   '/api/ads': typeof ApiAdsRoute
   '/api/assistant': typeof ApiAssistantRoute
+  '/api/editor-ai': typeof ApiEditorAiRoute
   '/api/stt': typeof ApiSttRoute
   '/api/translate': typeof ApiTranslateRoute
   '/api/tts': typeof ApiTtsRoute
@@ -160,6 +174,7 @@ export interface FileRoutesByTo {
   '/ads': typeof AuthenticatedAdsRoute
   '/dashboard': typeof AuthenticatedDashboardRoute
   '/editor': typeof AuthenticatedEditorRoute
+  '/journal': typeof AuthenticatedJournalRoute
   '/library': typeof AuthenticatedLibraryRoute
   '/models': typeof AuthenticatedModelsRoute
   '/profiles': typeof AuthenticatedProfilesRoute
@@ -167,6 +182,7 @@ export interface FileRoutesByTo {
   '/team': typeof AuthenticatedTeamRoute
   '/api/ads': typeof ApiAdsRoute
   '/api/assistant': typeof ApiAssistantRoute
+  '/api/editor-ai': typeof ApiEditorAiRoute
   '/api/stt': typeof ApiSttRoute
   '/api/translate': typeof ApiTranslateRoute
   '/api/tts': typeof ApiTtsRoute
@@ -183,6 +199,7 @@ export interface FileRoutesById {
   '/_authenticated/assistant': typeof AuthenticatedAssistantRouteWithChildren
   '/_authenticated/dashboard': typeof AuthenticatedDashboardRoute
   '/_authenticated/editor': typeof AuthenticatedEditorRoute
+  '/_authenticated/journal': typeof AuthenticatedJournalRoute
   '/_authenticated/library': typeof AuthenticatedLibraryRoute
   '/_authenticated/models': typeof AuthenticatedModelsRoute
   '/_authenticated/profiles': typeof AuthenticatedProfilesRoute
@@ -190,6 +207,7 @@ export interface FileRoutesById {
   '/_authenticated/team': typeof AuthenticatedTeamRoute
   '/api/ads': typeof ApiAdsRoute
   '/api/assistant': typeof ApiAssistantRoute
+  '/api/editor-ai': typeof ApiEditorAiRoute
   '/api/stt': typeof ApiSttRoute
   '/api/translate': typeof ApiTranslateRoute
   '/api/tts': typeof ApiTtsRoute
@@ -206,6 +224,7 @@ export interface FileRouteTypes {
     | '/assistant'
     | '/dashboard'
     | '/editor'
+    | '/journal'
     | '/library'
     | '/models'
     | '/profiles'
@@ -213,6 +232,7 @@ export interface FileRouteTypes {
     | '/team'
     | '/api/ads'
     | '/api/assistant'
+    | '/api/editor-ai'
     | '/api/stt'
     | '/api/translate'
     | '/api/tts'
@@ -226,6 +246,7 @@ export interface FileRouteTypes {
     | '/ads'
     | '/dashboard'
     | '/editor'
+    | '/journal'
     | '/library'
     | '/models'
     | '/profiles'
@@ -233,6 +254,7 @@ export interface FileRouteTypes {
     | '/team'
     | '/api/ads'
     | '/api/assistant'
+    | '/api/editor-ai'
     | '/api/stt'
     | '/api/translate'
     | '/api/tts'
@@ -248,6 +270,7 @@ export interface FileRouteTypes {
     | '/_authenticated/assistant'
     | '/_authenticated/dashboard'
     | '/_authenticated/editor'
+    | '/_authenticated/journal'
     | '/_authenticated/library'
     | '/_authenticated/models'
     | '/_authenticated/profiles'
@@ -255,6 +278,7 @@ export interface FileRouteTypes {
     | '/_authenticated/team'
     | '/api/ads'
     | '/api/assistant'
+    | '/api/editor-ai'
     | '/api/stt'
     | '/api/translate'
     | '/api/tts'
@@ -269,6 +293,7 @@ export interface RootRouteChildren {
   ResetPasswordRoute: typeof ResetPasswordRoute
   ApiAdsRoute: typeof ApiAdsRoute
   ApiAssistantRoute: typeof ApiAssistantRoute
+  ApiEditorAiRoute: typeof ApiEditorAiRoute
   ApiSttRoute: typeof ApiSttRoute
   ApiTranslateRoute: typeof ApiTranslateRoute
   ApiTtsRoute: typeof ApiTtsRoute
@@ -332,6 +357,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedEditorRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/journal': {
+      id: '/_authenticated/journal'
+      path: '/journal'
+      fullPath: '/journal'
+      preLoaderRoute: typeof AuthenticatedJournalRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/_authenticated/library': {
       id: '/_authenticated/library'
       path: '/library'
@@ -379,6 +411,13 @@ declare module '@tanstack/react-router' {
       path: '/api/assistant'
       fullPath: '/api/assistant'
       preLoaderRoute: typeof ApiAssistantRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/editor-ai': {
+      id: '/api/editor-ai'
+      path: '/api/editor-ai'
+      fullPath: '/api/editor-ai'
+      preLoaderRoute: typeof ApiEditorAiRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/stt': {
@@ -440,6 +479,7 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedAssistantRoute: typeof AuthenticatedAssistantRouteWithChildren
   AuthenticatedDashboardRoute: typeof AuthenticatedDashboardRoute
   AuthenticatedEditorRoute: typeof AuthenticatedEditorRoute
+  AuthenticatedJournalRoute: typeof AuthenticatedJournalRoute
   AuthenticatedLibraryRoute: typeof AuthenticatedLibraryRoute
   AuthenticatedModelsRoute: typeof AuthenticatedModelsRoute
   AuthenticatedProfilesRoute: typeof AuthenticatedProfilesRoute
@@ -452,6 +492,7 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedAssistantRoute: AuthenticatedAssistantRouteWithChildren,
   AuthenticatedDashboardRoute: AuthenticatedDashboardRoute,
   AuthenticatedEditorRoute: AuthenticatedEditorRoute,
+  AuthenticatedJournalRoute: AuthenticatedJournalRoute,
   AuthenticatedLibraryRoute: AuthenticatedLibraryRoute,
   AuthenticatedModelsRoute: AuthenticatedModelsRoute,
   AuthenticatedProfilesRoute: AuthenticatedProfilesRoute,
@@ -469,6 +510,7 @@ const rootRouteChildren: RootRouteChildren = {
   ResetPasswordRoute: ResetPasswordRoute,
   ApiAdsRoute: ApiAdsRoute,
   ApiAssistantRoute: ApiAssistantRoute,
+  ApiEditorAiRoute: ApiEditorAiRoute,
   ApiSttRoute: ApiSttRoute,
   ApiTranslateRoute: ApiTranslateRoute,
   ApiTtsRoute: ApiTtsRoute,

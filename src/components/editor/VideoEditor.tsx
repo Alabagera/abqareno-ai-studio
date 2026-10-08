@@ -24,6 +24,9 @@ import { AudioRecorder, CameraCapture } from "@/components/MediaCapture";
 import { VoiceEnhancer } from "@/components/VoiceEnhancer";
 import { Button } from "@/components/ui/button";
 import { LongPressStrip } from "./LongPressStrip";
+import { EditorAI } from "./EditorAI";
+import { TransitionPicker } from "./TransitionPicker";
+import { TX_DURATION, txFx, type TxFx } from "@/lib/editor/transitions";
 import { AudioFxEditor, BG_OPTIONS, Check, ColorIn, FiltersEditor, KeyEditor, Range, Section, Sel } from "./controls";
 
 type SelType = "clip" | "overlay" | "audio" | "text" | "caption" | "logo";
@@ -135,7 +138,13 @@ export function VideoEditor({ projectId }: { projectId: string }) {
   useEffect(() => { if (!format && supported[0]) setFormat(supported[0].id); }, [supported, format]);
 
   const update = useCallback((fn: (p: Project) => Project) => setProj((p) => fn(p)), []);
-  const toggle = (k: string, force?: boolean) => setOpen((s) => { const n = new Set(full ? [] : s); if (force ?? !n.has(k)) n.add(k); else n.delete(k); return n; });
+  const toggle = (k: string, force?: boolean) => setOpen((s) => { const on = force ?? !s.has(k); const n = new Set(full ? [] : s); if (on) n.add(k); else n.delete(k); return n; });
+  const [theater, setTheater] = useState(false);
+  const [rotated, setRotated] = useState(false);
+  const [txPick, setTxPick] = useState<string | null>(null);
+  const [vstt, setVstt] = useState<string | null>(null);
+  const stageRef = useRef<HTMLDivElement>(null);
+  const lastTap = useRef(0);
   useEffect(() => { if (full && sel?.type === "clip") toggle("clip", true); }, [sel?.id]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // ---------- load & resolve private media links ----------
@@ -223,6 +232,29 @@ export function VideoEditor({ projectId }: { projectId: string }) {
   }
   const dims = (el: MediaEl | undefined) => !el || el instanceof HTMLAudioElement ? [0, 0] : el instanceof HTMLVideoElement ? [el.videoWidth, el.videoHeight] : [el.naturalWidth, el.naturalHeight];
 
+  function drawClip(ctx: CanvasRenderingContext2D, p: Project, clip: Clip, lt: number, W: number, H: number, fx: TxFx | null) {
+    const el = els.current.get(clip.id); const [sw, sh] = dims(el);
+    if (!el || el instanceof HTMLAudioElement || !sw || !sh) return;
+    const len = clipLen(clip);
+    let alpha = fx?.alpha ?? 1;
+    if (clip.fadeIn > 0) alpha = Math.min(alpha, lt / clip.fadeIn);
+    if (clip.fadeOut > 0) alpha = Math.min(alpha, (len - lt) / clip.fadeOut);
+    ctx.save();
+    if (fx?.clip) { ctx.beginPath(); fx.clip(ctx, W, H); ctx.clip(); }
+    ctx.globalAlpha = clamp(alpha);
+    if (p.brand.bgBlur && clip.fit === "contain" && clip.key.mode === "none" && !p.brand.bgImage) {
+      const b = Math.max(W / sw, H / sh) * 1.1; ctx.filter = "blur(28px) brightness(0.6)"; ctx.drawImage(el, (W - sw * b) / 2, (H - sh * b) / 2, sw * b, sh * b); ctx.filter = "none";
+    }
+    let s = (clip.fit === "cover" ? Math.max(W / sw, H / sh) : Math.min(W / sw, H / sh)) * (clip.zoom / 100);
+    if (clip.kenBurns) s *= 1 + 0.1 * (lt / len);
+    s *= fx?.scale ?? 1;
+    ctx.translate(W / 2 + (fx?.tx ?? 0), H / 2 + (fx?.ty ?? 0)); ctx.rotate(fx?.rot ?? 0); ctx.scale(fx?.sx ?? 1, fx?.sy ?? 1);
+    ctx.rotate((clip.rotate * Math.PI) / 180); if (clip.flipX) ctx.scale(-1, 1);
+    const dw = sw * s, dh = sh * s;
+    drawMedia(ctx, clip.id, el, clip.key, filterCss({ ...clip.filters, blur: clip.filters.blur + (fx?.blur ?? 0) }), -dw / 2, -dh / 2, dw, dh);
+    ctx.restore();
+  }
+
   function draw(t: number) {
     const c = canvasRef.current; const ctx = c?.getContext("2d"); if (!c || !ctx) return;
     const p = projRef.current; const W = c.width, H = c.height, S = Math.min(W, H) / 1080;
@@ -232,41 +264,14 @@ export function VideoEditor({ projectId }: { projectId: string }) {
     const [bw, bh] = dims(bg);
     if (bg instanceof HTMLImageElement && bw && bh) { const s = Math.max(W / bw, H / bh); ctx.drawImage(bg, (W - bw * s) / 2, (H - bh * s) / 2, bw * s, bh * s); }
 
-    // Main track
+    // Main track (previous clip stays underneath during a transition)
     const hit = locate(t);
     if (hit) {
-      const { clip, lt } = hit; const el = els.current.get(clip.id);
-      const [sw, sh] = dims(el);
-      if (el && !(el instanceof HTMLAudioElement) && sw && sh) {
-        const len = clipLen(clip);
-        if (p.brand.bgBlur && clip.fit === "contain" && clip.key.mode === "none" && !p.brand.bgImage) {
-          const s = Math.max(W / sw, H / sh) * 1.1; ctx.filter = "blur(28px) brightness(0.6)"; ctx.drawImage(el, (W - sw * s) / 2, (H - sh * s) / 2, sw * s, sh * s); ctx.filter = "none";
-        }
-        let s = (clip.fit === "cover" ? Math.max(W / sw, H / sh) : Math.min(W / sw, H / sh)) * (clip.zoom / 100);
-        if (clip.kenBurns) s *= 1 + 0.1 * (lt / len);
-        const tp = clip.transition === "none" ? 1 : clamp(lt / 0.7); const e = ease(tp);
-        let alpha = 1; let extraBlur = 0;
-        if (clip.fadeIn > 0) alpha = Math.min(alpha, lt / clip.fadeIn);
-        if (clip.fadeOut > 0) alpha = Math.min(alpha, (len - lt) / clip.fadeOut);
-        ctx.save(); ctx.translate(W / 2, H / 2);
-        if (clip.transition === "fade") alpha *= tp;
-        if (clip.transition === "zoom") s *= 1.35 - 0.35 * e;
-        if (clip.transition === "slide") ctx.translate(-(1 - e) * W, 0);
-        if (clip.transition === "spin") { ctx.rotate((1 - e) * Math.PI * 0.5); s *= 0.6 + 0.4 * e; }
-        if (clip.transition === "blur") extraBlur = (1 - tp) * 24;
-        if (clip.transition === "whip") { ctx.translate((1 - e) * W * 1.2, 0); extraBlur = (1 - tp) * 30; }
-        if (clip.transition === "push") ctx.translate(0, (1 - e) * H);
-        if (clip.transition === "glitch" && tp < 1) { ctx.translate((Math.random() - 0.5) * 60 * (1 - tp), (Math.random() - 0.5) * 12 * (1 - tp)); alpha *= Math.random() > 0.25 ? 1 : 0.4; }
-        if (clip.transition === "wipe" && tp < 1) { ctx.beginPath(); ctx.rect(-W / 2, -H / 2, W * e, H); ctx.clip(); }
-        if (clip.transition === "circle" && tp < 1) { ctx.beginPath(); ctx.arc(0, 0, (Math.hypot(W, H) / 2) * e, 0, Math.PI * 2); ctx.clip(); }
-        ctx.rotate((clip.rotate * Math.PI) / 180); if (clip.flipX) ctx.scale(-1, 1);
-        ctx.globalAlpha = clamp(alpha);
-        const dw = sw * s, dh = sh * s;
-        drawMedia(ctx, clip.id, el, clip.key, filterCss({ ...clip.filters, blur: clip.filters.blur + extraBlur }), -dw / 2, -dh / 2, dw, dh);
-        ctx.restore();
-        if (clip.transition === "flash" && tp < 1) { ctx.fillStyle = `rgba(255,255,255,${1 - tp})`; ctx.fillRect(0, 0, W, H); }
-        if (clip.transition === "dip" && tp < 1) { ctx.fillStyle = `rgba(0,0,0,${1 - tp})`; ctx.fillRect(0, 0, W, H); }
-      }
+      const fx = hit.clip.transition !== "none" && hit.lt < TX_DURATION ? txFx(hit.clip.transition, ease(clamp(hit.lt / TX_DURATION)), W, H) : null;
+      const idx = p.clips.indexOf(hit.clip); const prev = idx > 0 ? p.clips[idx - 1] : undefined;
+      if (fx && prev) drawClip(ctx, p, prev, clipLen(prev) - 0.01, W, H, { alpha: fx.prevAlpha ?? 1, blur: 0, scale: fx.prevScale ?? 1, sx: 1, sy: 1, tx: fx.prevTx ?? 0, ty: fx.prevTy ?? 0, rot: 0 });
+      drawClip(ctx, p, hit.clip, hit.lt, W, H, fx);
+      ctx.globalAlpha = 1; ctx.filter = "none"; fx?.overlay?.(ctx, W, H);
     }
     ctx.restore();
 
@@ -369,9 +374,17 @@ export function VideoEditor({ projectId }: { projectId: string }) {
 
   // ---------- timing ----------
   function targets(t: number) {
-    const p = projRef.current; const out: { el: HTMLMediaElement; active: boolean; at: number; rate: number }[] = [];
+    const p = projRef.current; const out: { el: HTMLMediaElement; active: boolean; at: number; rate: number; hold?: boolean }[] = [];
     let off = 0;
-    for (const c of p.clips) { const len = clipLen(c); const el = els.current.get(c.id); if (el instanceof HTMLVideoElement) out.push({ el, active: t >= off && t < off + len, at: c.trimStart + clamp(t - off, 0, len) * c.speed, rate: c.speed }); off += len; }
+    p.clips.forEach((c, i) => {
+      const len = clipLen(c); const el = els.current.get(c.id); const next = p.clips[i + 1];
+      if (el instanceof HTMLVideoElement) {
+        const active = t >= off && t < off + len;
+        const hold = !active && !!next && next.transition !== "none" && t >= off + len && t < off + len + TX_DURATION;
+        out.push({ el, active: active || hold, hold, at: hold ? Math.max(c.trimStart, c.trimEnd - 0.05) : c.trimStart + clamp(t - off, 0, len) * c.speed, rate: c.speed });
+      }
+      off += len;
+    });
     for (const o of p.overlays) { const el = els.current.get(o.id); if (el instanceof HTMLVideoElement) out.push({ el, active: t >= o.start && t < o.start + ovLen(o), at: o.trimStart + clamp(t - o.start, 0, ovLen(o)), rate: 1 }); }
     return out;
   }
@@ -385,13 +398,14 @@ export function VideoEditor({ projectId }: { projectId: string }) {
 
   function sync(t: number, total: number) {
     const p = projRef.current; const mx = mixer.current;
-    const syncEl = (el: HTMLMediaElement, active: boolean, at: number, rate: number) => {
+    const syncEl = (el: HTMLMediaElement, active: boolean, at: number, rate: number, hold = false) => {
       if (!active) { if (!el.paused) el.pause(); return; }
+      if (hold) { if (!el.paused) el.pause(); if (Math.abs(el.currentTime - at) > 0.15) el.currentTime = at; return; }
       if (el.playbackRate !== rate) el.playbackRate = rate;
       if (el.paused) { el.currentTime = at; void el.play().catch(() => undefined); }
       else if (Math.abs(el.currentTime - at) > 0.3) el.currentTime = at;
     };
-    for (const x of targets(t)) syncEl(x.el, x.active, x.at, x.rate);
+    for (const x of targets(t)) syncEl(x.el, x.active, x.at, x.rate, x.hold);
     if (mx) {
       for (const c of p.clips) { const el = els.current.get(c.id); if (el instanceof HTMLVideoElement) mx.apply(el, c.audio, 1, c.muted); }
       for (const o of p.overlays) { const el = els.current.get(o.id); if (el instanceof HTMLVideoElement) mx.apply(el, o.audio, 1, o.muted); }
@@ -568,6 +582,65 @@ export function VideoEditor({ projectId }: { projectId: string }) {
       toast.success("تم تفريغ الكلام إلى ترجمة نصية متزامنة");
     } catch (e) { toast.error((e as Error).message); } finally { setBusy(null); }
   }
+  async function captionsFromVideo() {
+    const p = projRef.current;
+    if (!p.clips.some((c) => c.kind === "video" && !c.muted)) { toast.error("أضف فيديو فيه كلام أولًا"); return; }
+    setBusy("vstt"); setVstt("جارٍ استخراج صوت الفيديو…");
+    try {
+      const rate = 16000; const totalS = mainLen(p); const pcm = new Float32Array(Math.ceil(totalS * rate) + 1);
+      let off = 0;
+      for (const c of p.clips) {
+        const len = clipLen(c);
+        if (c.kind === "video" && !c.muted) {
+          try {
+            const buf = await decodeAudio(await (await fetch(c.asset.url)).blob()); const ch = buf.getChannelData(0); const ch2 = buf.numberOfChannels > 1 ? buf.getChannelData(1) : ch;
+            const start = Math.round(off * rate); const n = Math.floor(len * rate);
+            for (let i = 0; i < n; i++) { const j = Math.floor((c.trimStart + (i / rate) * c.speed) * buf.sampleRate); pcm[start + i] = ((ch[j] ?? 0) + (ch2[j] ?? 0)) / 2; }
+          } catch { toast.warning(`تعذر قراءة صوت «${c.asset.name}»`); }
+        }
+        off += len;
+      }
+      // Loudness per 50ms window, then cut segments at natural pauses.
+      const win = rate / 20; const rms: number[] = [];
+      for (let i = 0; i < pcm.length; i += win) { let s2 = 0; const e = Math.min(pcm.length, i + win); for (let k = i; k < e; k++) s2 += pcm[k]! * pcm[k]!; rms.push(Math.sqrt(s2 / Math.max(1, e - i))); }
+      const peak = Math.max(...rms, 0); const thr = Math.max(0.006, peak * 0.07);
+      const segs: [number, number][] = []; let segStart = -1, quiet = 0;
+      rms.forEach((v, i) => {
+        const loud = v > thr;
+        if (loud) { if (segStart < 0) segStart = Math.max(0, i - 4); quiet = 0; } else if (segStart >= 0) quiet++;
+        const dur = segStart >= 0 ? (i - segStart) / 20 : 0;
+        if (segStart >= 0 && ((quiet >= 8 && dur > 1) || (quiet >= 3 && dur > 14) || dur > 28 || i === rms.length - 1)) { segs.push([segStart / 20, (i - quiet + 3) / 20]); segStart = -1; quiet = 0; }
+      });
+      if (!segs.length) throw new Error("لم يُعثر على كلام في صوت الفيديو");
+      const caps: Caption[] = []; const allText: string[] = [];
+      for (const [i, [a, b]] of segs.entries()) {
+        setVstt(`جارٍ تحويل الكلام إلى نص… ${i + 1}/${segs.length}`);
+        const s0 = Math.floor(a * rate), s1 = Math.min(pcm.length, Math.ceil(b * rate)); if (s1 - s0 < rate * 0.3) continue;
+        const ab = new AudioBuffer({ length: s1 - s0, numberOfChannels: 1, sampleRate: rate }); ab.copyToChannel(pcm.slice(s0, s1), 0);
+        const text = (await transcribeClip(new Blob([toWav(ab)], { type: "audio/wav" }))).trim();
+        if (!text) continue; allText.push(text);
+        caps.push(...distribute(chunkText(text), a, b - a));
+        update((pp) => ({ ...pp, captions: [...caps] }));
+      }
+      if (!caps.length) throw new Error("لم يُتعرف على كلام واضح");
+      update((pp) => ({ ...pp, captions: caps, script: pp.script || allText.join("\n"), captionStyle: { ...pp.captionStyle, show: true } }));
+      toast.success(`تم: ${caps.length} سطر متزامن مع كلام الفيديو`);
+    } catch (e) { toast.error((e as Error).message); } finally { setBusy(null); setVstt(null); }
+  }
+  async function enterTheater() {
+    setTheater(true);
+    try { await stageRef.current?.requestFullscreen?.({ navigationUI: "hide" }); } catch { /* iOS */ }
+    if (ratio > 1) {
+      const o = screen.orientation as ScreenOrientation & { lock?: (o: string) => Promise<void> };
+      try { await o.lock?.("landscape"); setRotated(false); } catch { setRotated(window.innerHeight > window.innerWidth); }
+    }
+  }
+  function exitTheater() {
+    setTheater(false); setRotated(false);
+    try { (screen.orientation as ScreenOrientation & { unlock?: () => void }).unlock?.(); } catch { /* ignore */ }
+    if (document.fullscreenElement) void document.exitFullscreen().catch(() => undefined);
+  }
+  useEffect(() => { const h = () => { if (!document.fullscreenElement) { setTheater(false); setRotated(false); } }; document.addEventListener("fullscreenchange", h); return () => document.removeEventListener("fullscreenchange", h); }, []);
   async function translateAll() {
     if (!proj.captions.length) { toast.error("أنشئ الترجمة النصية أولًا"); return; }
     setBusy("tr");
@@ -637,6 +710,10 @@ export function VideoEditor({ projectId }: { projectId: string }) {
   const dragRef = useRef<{ type: SelType; id: string; sx: number; sy: number; ox: number; oy: number } | null>(null);
   const toCanvas = (e: React.PointerEvent<HTMLCanvasElement>) => { const c = e.currentTarget; const r = c.getBoundingClientRect(); return { x: ((e.clientX - r.left) / r.width) * c.width, y: ((e.clientY - r.top) / r.height) * c.height, W: c.width, H: c.height }; };
   function onCanvasDown(e: React.PointerEvent<HTMLCanvasElement>) {
+    const now = performance.now();
+    if (now - lastTap.current < 320) { lastTap.current = 0; dragRef.current = null; if (theater) exitTheater(); else void enterTheater(); return; }
+    lastTap.current = now;
+    if (theater) return;
     const { x, y } = toCanvas(e);
     const hit = [...rects.current].reverse().find((r) => x >= r.x && x <= r.x + r.w && y >= r.y && y <= r.y + r.h);
     if (!hit) { const m = locate(time); if (m) setSel({ type: "clip", id: m.clip.id }); return; }
@@ -665,7 +742,7 @@ export function VideoEditor({ projectId }: { projectId: string }) {
       if (e.code === "Space") { e.preventDefault(); togglePlay(); }
       else if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "z") { e.preventDefault(); if (e.shiftKey) redo(); else undo(); }
       else if (e.key === "Delete" || e.key === "Backspace") removeSelected();
-      else if (e.key === "Escape") setFull(false);
+      else if (e.key === "Escape") { if (theater) exitTheater(); else setFull(false); }
       else if (e.key.toLowerCase() === "s" && !e.ctrlKey) splitAtPlayhead();
     };
     window.addEventListener("keydown", k); return () => window.removeEventListener("keydown", k);
@@ -710,7 +787,7 @@ export function VideoEditor({ projectId }: { projectId: string }) {
             <Check label="حركة تقريب سينمائية" checked={selClip.kenBurns} onChange={(v) => updClip(selClip.id, { kenBurns: v })} />
           </div>}
           <div className="grid grid-cols-2 gap-2">
-            <Sel label="الانتقال عند البداية" value={selClip.transition} onChange={(v) => updClip(selClip.id, { transition: v })} options={TRANSITIONS.map((t) => ({ id: t.id, label: t.label }))} />
+            <Sel label="الانتقال عند البداية" value={selClip.transition} onChange={(v) => updClip(selClip.id, { transition: v })} options={TRANSITIONS.map((t) => ({ id: t.id, label: `${t.group} · ${t.label}` }))} />
             <Sel label="الملاءمة" value={selClip.fit} onChange={(v) => updClip(selClip.id, { fit: v })} options={[{ id: "cover", label: "ملء الإطار" }, { id: "contain", label: "إظهار كامل" }]} />
             <Range label="ظهور تدريجي" min={0} max={3} step={0.1} value={selClip.fadeIn} suffix="s" onChange={(v) => updClip(selClip.id, { fadeIn: v })} />
             <Range label="اختفاء تدريجي" min={0} max={3} step={0.1} value={selClip.fadeOut} suffix="s" onChange={(v) => updClip(selClip.id, { fadeOut: v })} />
@@ -790,7 +867,8 @@ export function VideoEditor({ projectId }: { projectId: string }) {
 
       <Section title="النص المنطوق على الشاشة والترجمة" icon={<Captions className="size-4" />} open={open.has("captions")} onToggle={() => toggle("captions")} badge={<span className="text-[10px] text-muted-foreground">{proj.captions.length}</span>}>
         <div className="flex flex-wrap gap-2">
-          <Button size="sm" variant="gold" disabled={busy === "stt"} onClick={() => void captionsFromAudio()}><Mic className="size-3" />{busy === "stt" ? "جارٍ التفريغ…" : "من الصوت تلقائيًا"}</Button>
+          <Button size="sm" variant="gold" disabled={busy === "vstt"} onClick={() => void captionsFromVideo()}><Film className="size-3" />{busy === "vstt" ? vstt ?? "جارٍ…" : "من كلام الفيديو تلقائيًا"}</Button>
+          <Button size="sm" variant="glass" disabled={busy === "stt"} onClick={() => void captionsFromAudio()}><Mic className="size-3" />{busy === "stt" ? "جارٍ التفريغ…" : "من طبقة الصوت"}</Button>
           <Button size="sm" variant="glass" onClick={captionsFromScript}><Type className="size-3" />من النص المكتوب</Button>
           <Button size="sm" variant="glass" onClick={() => update((p) => ({ ...p, captions: [...p.captions, { id: uid(), start: time, end: time + 3, text: "نص جديد", translation: "" }].sort((a, b) => a.start - b.start) }))}><Plus className="size-3" />سطر يدوي</Button>
         </div>
@@ -901,9 +979,10 @@ export function VideoEditor({ projectId }: { projectId: string }) {
         <Button size="sm" variant="ghost" onClick={snapshot}><ImageIcon className="size-3" />حفظ لقطة من الإطار الحالي (PNG)</Button>
       </Section>
 
-      <Section title="أدوات الذكاء الاصطناعي للفيديو" icon={<Sparkles className="size-4" />} open={open.has("ai")} onToggle={() => toggle("ai")}>
-        <p className="text-muted-foreground">تعمل بعد ربط نماذجها المفتوحة بسيرفرك من صفحة النماذج.</p>
-        {[...modelsFor("video"), ...modelsFor("video_edit")].map((m) => <div key={m.id} className="rounded-md border border-border p-2"><b dir="auto">{m.name}</b><p className="text-muted-foreground">{m.description}</p></div>)}
+      <Section title="الذكاء الاصطناعي للفيديو" icon={<Sparkles className="size-4" />} open={open.has("ai")} onToggle={() => toggle("ai")}>
+        <EditorAI selected={selClip && selClip.kind === "video" ? { url: selClip.asset.url, name: selClip.asset.name } : null} size={{ w: size.w, h: size.h }}
+          onAdd={(a) => void addAsset("main", "video", { path: a.path, url: a.url, name: a.name })} />
+        <details className="text-muted-foreground"><summary className="cursor-pointer">النماذج المدعومة</summary>{[...modelsFor("video"), ...modelsFor("video_edit")].map((m) => <p key={m.id} dir="auto"><b>{m.name}</b> — {m.description}</p>)}</details>
       </Section>
     </div>
   );
@@ -923,8 +1002,13 @@ export function VideoEditor({ projectId }: { projectId: string }) {
   const viewerMax = full ? "calc(100dvh - 250px)" : "58vh";
   const viewer = (
     <div className="flex min-h-0 min-w-0 flex-1 flex-col">
-      <div className="flex flex-1 items-center justify-center bg-muted/40 p-2">
-        <canvas ref={canvasRef} onPointerDown={onCanvasDown} onPointerMove={onCanvasMove} onPointerUp={() => (dragRef.current = null)} className="touch-none rounded-lg bg-black shadow-lg" style={{ aspectRatio: `${ratio}`, width: "100%", maxWidth: `calc(${viewerMax} * ${ratio})`, maxHeight: viewerMax }} />
+      <div ref={stageRef} className={theater ? "fixed inset-0 z-[90] flex items-center justify-center bg-black" : "relative flex flex-1 items-center justify-center bg-muted/40 p-2"}>
+        <canvas ref={canvasRef} onPointerDown={onCanvasDown} onPointerMove={onCanvasMove} onPointerUp={() => (dragRef.current = null)} className={`touch-none bg-black ${theater ? "" : "rounded-lg shadow-lg"}`}
+          style={theater ? (rotated ? { aspectRatio: `${ratio}`, width: `min(100dvh, calc(100vw * ${ratio}))`, transform: "rotate(90deg)" } : { aspectRatio: `${ratio}`, width: "100%", maxWidth: `calc(100dvh * ${ratio})`, maxHeight: "100dvh" }) : { aspectRatio: `${ratio}`, width: "100%", maxWidth: `calc(${viewerMax} * ${ratio})`, maxHeight: viewerMax }} />
+        {theater ? <div className="absolute bottom-4 left-1/2 flex -translate-x-1/2 gap-3 opacity-80" style={rotated ? { transform: "translateX(-50%)" } : undefined}>
+          <button type="button" onClick={togglePlay} aria-label="تشغيل" className="grid size-12 place-items-center rounded-full bg-background/40 text-foreground backdrop-blur">{isPlaying ? <Pause className="size-6" /> : <Play className="size-6" />}</button>
+          <button type="button" onClick={exitTheater} aria-label="خروج من العرض الكامل" className="grid size-12 place-items-center rounded-full bg-background/40 text-foreground backdrop-blur"><Minimize2 className="size-6" /></button>
+        </div> : <button type="button" onClick={() => void enterTheater()} aria-label="عرض الفيديو كاملًا" title="عرض كامل (أو اضغط مرتين على الفيديو)" className="absolute bottom-3 left-3 grid size-9 place-items-center rounded-full bg-background/70 text-gold shadow"><Maximize2 className="size-4" /></button>}
       </div>
       <div className="space-y-1 border-t border-border p-2" dir="rtl">
         <input type="range" min={0} max={Math.max(total, 0.1)} step={0.05} value={time} disabled={isPlaying} onChange={(e) => void seek(+e.target.value)} className="w-full accent-[var(--gold)]" aria-label="الخط الزمني" dir="ltr" />
@@ -947,7 +1031,8 @@ export function VideoEditor({ projectId }: { projectId: string }) {
       {proj.clips.length === 0 ? <p className="py-3 text-center text-xs text-muted-foreground">أضف فيديوهات أو صورًا لتظهر هنا</p> : (
         <LongPressStrip items={proj.clips} selectedId={sel?.type === "clip" ? sel.id : null} onReorder={reorder} width={(c) => Math.max(76, Math.min(240, clipLen(c) * 16))}
           onSelect={(id) => { setSel({ type: "clip", id }); if (!playing.current) void seek(startOf(id) + 0.01); }}
-          render={(c, i) => <ClipChip clip={c} index={i} />} />
+          render={(c, i) => <>{i > 0 && <button type="button" aria-label="اختر الانتقال" title="الانتقال" onPointerDown={(e) => e.stopPropagation()} onPointerUp={(e) => e.stopPropagation()} onClick={(e) => { e.stopPropagation(); setTxPick(c.id); }}
+            className={`absolute left-0 top-1/2 z-10 grid size-7 -translate-y-1/2 place-items-center rounded-full border-2 border-background text-[11px] font-bold ${c.transition === "none" ? "bg-secondary text-muted-foreground" : "bg-gold text-primary-foreground"}`}>⇄</button>}<div className={i > 0 ? "ps-0 pl-6" : ""}><ClipChip clip={c} index={i} /></div></>} />
       )}
       {(selAud || selOv || selText || selClip) && <div className="flex flex-wrap items-center gap-2 text-xs" dir="rtl">
         <span>بداية العنصر المحدد (ثانية)</span>
@@ -997,7 +1082,11 @@ export function VideoEditor({ projectId }: { projectId: string }) {
     </div>
   );
 
-  return <>{full ? createPortal(body, document.body) : body}{libraryPicker && createPortal(libraryPicker, document.body)}</>;
+  const txClip = txPick ? proj.clips.find((c) => c.id === txPick) : undefined;
+  return <>{full ? createPortal(body, document.body) : body}{libraryPicker && createPortal(libraryPicker, document.body)}
+    {txClip && createPortal(<TransitionPicker value={txClip.transition} onClose={() => setTxPick(null)}
+      onPick={(id) => { updClip(txClip.id, { transition: id }); void seek(Math.max(0, startOf(txClip.id) - 0.3)).then(() => { if (!playing.current) void run(Math.max(0, startOf(txClip.id) - 0.3)); setTimeout(() => (playing.current = false), 1400); }); }}
+      onAll={(id) => { update((p) => ({ ...p, clips: p.clips.map((c, i) => (i > 0 ? { ...c, transition: id } : c)) })); toast.success("طُبق الانتقال على كل المقاطع"); }} />, document.body)}</>;
 }
 
 function ClipChip({ clip, index }: { clip: Clip; index: number }) {
