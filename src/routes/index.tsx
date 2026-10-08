@@ -2,6 +2,7 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { Mic, ImageIcon, Video, Languages, Captions, Cpu, PenLine, Wand2, FileText, Presentation, Code2, GraduationCap, AudioLines, Briefcase, ScanText } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Logo } from "@/components/Logo";
+import { useAuth } from "@/hooks/use-auth";
 import { AlabageraPortrait } from "@/components/AlabageraPortrait";
 
 export const Route = createFileRoute("/")({
@@ -43,13 +44,16 @@ const capabilities = [
 ];
 
 function Index() {
+  const { user } = useAuth();
   return (
     <div className="min-h-dvh">
       <header className="mx-auto flex max-w-6xl items-center justify-between px-5 py-5">
         <Logo />
-        <Button asChild variant="glass" size="sm">
-          <Link to="/auth">تسجيل الدخول</Link>
-        </Button>
+        {user ? (
+          <Button asChild variant="gold" size="sm"><Link to="/dashboard">لوحة التحكم</Link></Button>
+        ) : (
+          <Button asChild variant="glass" size="sm"><Link to="/auth">تسجيل الدخول</Link></Button>
+        )}
       </header>
       <main className="mx-auto max-w-6xl px-5 pb-20">
         <section className="relative overflow-hidden py-10 text-center md:py-20">
@@ -62,12 +66,12 @@ function Index() {
             استوديو عربي شخصي لصناعة الفيديو والمحتوى، مع مساعد ذكي للترجمة والبرمجة والكورسات وتحليل الملفات.
           </p>
           <div className="mt-8 flex justify-center gap-3">
-            <Button asChild variant="gold" size="lg">
-              <Link to="/auth">ابدأ الآن</Link>
-            </Button>
-            <Button asChild variant="glass" size="lg">
-              <Link to="/dashboard">لوحة التحكم</Link>
-            </Button>
+            {user ? (<>
+              <Button asChild variant="gold" size="lg"><Link to="/studio">إنشاء فيديو</Link></Button>
+              <Button asChild variant="glass" size="lg"><Link to="/dashboard">لوحة التحكم</Link></Button>
+            </>) : (
+              <Button asChild variant="gold" size="lg"><Link to="/auth">تسجيل الدخول</Link></Button>
+            )}
           </div>
         </section>
         <section className="mb-12">
