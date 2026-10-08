@@ -4,7 +4,7 @@ import { useQuery } from "@tanstack/react-query";
 import { LayoutDashboard, Clapperboard, FolderOpen, Cpu, LogOut, UserRoundCog, Users, Bot, Film, Megaphone, NotebookPen } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
 import { supabase } from "@/integrations/supabase/client";
-import { Logo } from "@/components/Logo";
+import { VoiceCommander } from "@/components/VoiceCommander";
 import { Button } from "@/components/ui/button";
 import { ThemeToggle } from "@/components/ThemeToggle";
 
@@ -44,7 +44,7 @@ function Layout() {
   return (
     <div className="min-h-dvh md:flex">
       <aside className="glass sticky top-0 hidden h-dvh w-64 shrink-0 flex-col gap-2 rounded-none border-y-0 border-s-0 p-5 md:flex">
-        <div className="mb-6 flex items-center justify-between"><Logo /><ThemeToggle /></div>
+        <div className="mb-6 flex items-center justify-between"><VoiceCommander /><ThemeToggle /></div>
         {visibleNav.map((n) => (
           <Link key={n.to} to={n.to} className="flex items-center gap-3 rounded-xl px-3 py-2.5 text-muted-foreground transition hover:bg-secondary hover:text-foreground" activeProps={{ className: "bg-secondary !text-gold" }}>
             <n.icon className="size-5" /> {n.label}
@@ -59,7 +59,7 @@ function Layout() {
       </aside>
 
       <header className="flex items-center justify-between px-4 py-4 md:hidden">
-        <Logo />
+        <VoiceCommander />
         <div className="flex gap-1"><ThemeToggle /><Button variant="ghost" size="icon" onClick={() => supabase.auth.signOut()} aria-label="خروج"><LogOut /></Button></div>
       </header>
 
