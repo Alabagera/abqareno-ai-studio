@@ -353,7 +353,7 @@ function Movable({ label, pos, onChange, children }: { label: string; pos: Overl
       setGuides({ v, h });
       onChange({ ...pos, x: Math.round(x * 1000) / 1000, y: Math.round(y * 1000) / 1000 });
     } else if (d.mode === "scale") onChange({ ...pos, s: Math.round(clamp((d.start.s ?? 1) + (dx + dy) * 2.5, 0.4, 3) * 100) / 100 });
-    else onChange({ ...pos, w: Math.round(clamp((d.start.w ?? 0.8) + Math.abs(dx) * 2 * Math.sign(dx || 1) * (document.dir === "rtl" ? -1 : 1), 0.15, 1) * 100) / 100 });
+    else onChange({ ...pos, w: Math.round(clamp((d.start.w ?? 0.8) + Math.abs(dx) * 2 * Math.sign(dx || 1), 0.15, 1) * 100) / 100 });
   }
   function end() { drag.current = null; setGuides({ v: false, h: false }); }
   function key(e: React.KeyboardEvent) {
@@ -372,9 +372,9 @@ function Movable({ label, pos, onChange, children }: { label: string; pos: Overl
       onPointerDown={(e) => begin("move", e)} onPointerMove={move} onPointerUp={end} onPointerCancel={end}>
       {children}
       {active && <>
-        <span onPointerDown={(e) => begin("scale", e)} onPointerMove={move} onPointerUp={end} className="absolute -bottom-2 -end-2 size-4 cursor-nwse-resize rounded-full border-2 border-background bg-gold shadow" aria-label="تكبير وتصغير" style={{ transform: `scale(${1 / scale})` }} />
-        <span onPointerDown={(e) => begin("width", e)} onPointerMove={move} onPointerUp={end} className="absolute -end-2 top-1/2 h-6 w-2.5 -translate-y-1/2 cursor-ew-resize rounded-full border border-background bg-gold-soft shadow" aria-label="توسيع المربع" style={{ transform: `translateY(-50%) scale(${1 / scale})` }} />
-        <div onPointerDown={(e) => e.stopPropagation()} className="absolute start-1/2 top-full z-30 mt-2 flex -translate-x-1/2 items-center gap-1 whitespace-nowrap rounded-lg border border-border bg-background/95 p-1 text-[10px] text-foreground shadow-lg rtl:translate-x-1/2" style={{ transform: `scale(${1 / scale})`, transformOrigin: "top center" }}>
+        <span onPointerDown={(e) => begin("scale", e)} onPointerMove={move} onPointerUp={end} className="absolute -bottom-2 -right-2 size-4 cursor-nwse-resize rounded-full border-2 border-background bg-gold shadow" aria-label="تكبير وتصغير" style={{ transform: `scale(${1 / scale})` }} />
+        <span onPointerDown={(e) => begin("width", e)} onPointerMove={move} onPointerUp={end} className="absolute -right-2 top-1/2 h-6 w-2.5 cursor-ew-resize rounded-full border border-background bg-gold-soft shadow" aria-label="توسيع المربع" style={{ transform: `translateY(-50%) scale(${1 / scale})` }} />
+        <div onPointerDown={(e) => e.stopPropagation()} dir="ltr" className="absolute left-1/2 top-full z-30 mt-2 flex items-center gap-1 whitespace-nowrap rounded-lg border border-border bg-background/95 p-1 text-[10px] text-foreground shadow-lg" style={{ transform: `translateX(-50%) scale(${1 / scale})`, transformOrigin: "top center" }}>
           <button type="button" className="rounded bg-secondary px-1.5" onClick={() => nudge(-0.005, 0)}>←</button>
           <button type="button" className="rounded bg-secondary px-1.5" onClick={() => nudge(0, -0.005)}>↑</button>
           <button type="button" className="rounded bg-secondary px-1.5" onClick={() => nudge(0, 0.005)}>↓</button>
