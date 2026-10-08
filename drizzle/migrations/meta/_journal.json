@@ -43,6 +43,13 @@
       "when": 1791272386192,
       "tag": "0005_assistant_threads_messages_attachments",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1791427965941,
+      "tag": "0006_editor_projects",
+      "breakpoints": true
     }
   ]
 }

@@ -175,6 +175,45 @@ export type Database = {
           },
         ]
       }
+      editor_projects: {
+        Row: {
+          created_at: string
+          created_by: string
+          data: Json
+          duration_seconds: number | null
+          export_path: string | null
+          id: string
+          owner_id: string
+          thumb_path: string | null
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string
+          data?: Json
+          duration_seconds?: number | null
+          export_path?: string | null
+          id?: string
+          owner_id?: string
+          thumb_path?: string | null
+          title?: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string
+          data?: Json
+          duration_seconds?: number | null
+          export_path?: string | null
+          id?: string
+          owner_id?: string
+          thumb_path?: string | null
+          title?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       media_assets: {
         Row: {
           created_at: string
