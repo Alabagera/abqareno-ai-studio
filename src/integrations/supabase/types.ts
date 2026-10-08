@@ -135,6 +135,7 @@ export type Database = {
         Row: {
           cover_asset_id: string | null
           created_at: string
+          created_by: string | null
           id: string
           image_asset_ids: string[]
           model: string
@@ -146,6 +147,7 @@ export type Database = {
         Insert: {
           cover_asset_id?: string | null
           created_at?: string
+          created_by?: string | null
           id?: string
           image_asset_ids?: string[]
           model?: string
@@ -157,6 +159,7 @@ export type Database = {
         Update: {
           cover_asset_id?: string | null
           created_at?: string
+          created_by?: string | null
           id?: string
           image_asset_ids?: string[]
           model?: string
@@ -217,6 +220,7 @@ export type Database = {
       media_assets: {
         Row: {
           created_at: string
+          created_by: string | null
           id: string
           kind: string
           mime_type: string | null
@@ -227,6 +231,7 @@ export type Database = {
         }
         Insert: {
           created_at?: string
+          created_by?: string | null
           id?: string
           kind: string
           mime_type?: string | null
@@ -237,6 +242,7 @@ export type Database = {
         }
         Update: {
           created_at?: string
+          created_by?: string | null
           id?: string
           kind?: string
           mime_type?: string | null
@@ -512,6 +518,7 @@ export type Database = {
       voice_profiles: {
         Row: {
           created_at: string
+          created_by: string | null
           enhancement: Json
           id: string
           model: string
@@ -524,6 +531,7 @@ export type Database = {
         }
         Insert: {
           created_at?: string
+          created_by?: string | null
           enhancement?: Json
           id?: string
           model?: string
@@ -536,6 +544,7 @@ export type Database = {
         }
         Update: {
           created_at?: string
+          created_by?: string | null
           enhancement?: Json
           id?: string
           model?: string
@@ -562,6 +571,11 @@ export type Database = {
     }
     Functions: {
       bootstrap_primary_owner: { Args: never; Returns: boolean }
+      can_manage_models: { Args: never; Returns: boolean }
+      can_see_content: {
+        Args: { _creator: string; _owner: string }
+        Returns: boolean
+      }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
