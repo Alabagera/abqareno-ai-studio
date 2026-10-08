@@ -108,14 +108,11 @@ function Journal() {
   const repLabel = (r: string) => REPEATS.find((x) => x.id === r)?.label ?? r;
 
   return (
-    <div dir="rtl" className="mx-auto max-w-4xl space-y-5 py-4">
-      <header className="glass relative overflow-hidden rounded-3xl p-6">
-        <div className="pointer-events-none absolute -left-10 -top-10 size-40 rounded-full bg-gold/20 blur-3xl" />
-        <p className="text-sm text-gold">يومياتي</p>
-        <h1 className="mt-1 text-3xl font-black">مهامك اليوم تصنع غدك</h1>
-        <div className="mt-4 flex items-start gap-3 rounded-2xl border border-gold/30 bg-background/40 p-4"><Quote className="size-5 shrink-0 text-gold" /><p className="text-lg font-bold" dir="auto">{quote}</p></div>
-        <div className="mt-4 flex items-center gap-3"><div className="h-2 flex-1 overflow-hidden rounded-full bg-secondary"><div className="h-full rounded-full bg-gold transition-all duration-700" style={{ width: `${pct}%` }} /></div><span className="text-sm font-bold text-gold">{pct}% منجز</span></div>
-        {notifyPerm !== "granted" && typeof Notification !== "undefined" && <Button size="sm" variant="glass" className="mt-3" onClick={async () => setNotifyPerm(await Notification.requestPermission())}><BellRing className="size-4" />فعّل إشعارات التذكير</Button>}
+    <div dir="rtl" className="mx-auto max-w-4xl space-y-3 py-2">
+      <header className="glass flex flex-wrap items-center gap-2 rounded-2xl px-3 py-2">
+        <Quote className="size-4 shrink-0 text-gold" /><p className="min-w-0 flex-1 truncate text-sm font-bold" dir="auto" title={quote}>{quote}</p>
+        <div className="flex items-center gap-1"><div className="h-1.5 w-16 overflow-hidden rounded-full bg-secondary"><div className="h-full rounded-full bg-gold transition-all duration-700" style={{ width: `${pct}%` }} /></div><span className="text-xs font-bold text-gold">{pct}%</span></div>
+        {notifyPerm !== "granted" && typeof Notification !== "undefined" && <button type="button" aria-label="فعّل الإشعارات" onClick={async () => setNotifyPerm(await Notification.requestPermission())} className="text-gold"><BellRing className="size-4" /></button>}
       </header>
 
       {praise && <div className="glass fixed inset-x-4 top-6 z-50 mx-auto max-w-sm animate-in fade-in zoom-in rounded-2xl border border-gold p-4 text-center text-lg font-black text-gold shadow-2xl"><Trophy className="mx-auto mb-1 size-8" />{praise}</div>}
@@ -123,7 +120,7 @@ function Journal() {
       <section className="glass space-y-3 rounded-2xl p-4">
         <h2 className="flex items-center gap-2 font-bold"><Plus className="size-5 text-gold" />مهمة جديدة</h2>
         <input dir="auto" value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} onKeyDown={(e) => e.key === "Enter" && void add()} placeholder="ماذا ستنجز؟ / What will you do?" className="bilingual-text h-11 w-full rounded-xl border border-input bg-background px-3" />
-        <textarea dir="auto" value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })} placeholder="ملاحظات (اختياري)" className="bilingual-text min-h-16 w-full rounded-xl border border-input bg-background p-3 text-sm" />
+        <textarea dir="auto" value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })} placeholder="اكتب ملاحظاتك وتفاصيل يومك هنا… (اختياري)" className="bilingual-text min-h-44 w-full resize-y rounded-xl border border-input bg-background p-3 text-sm" />
         <div className="flex flex-wrap gap-1">{REPEATS.map((r) => <button type="button" key={r.id} onClick={() => setForm({ ...form, repeat: r.id })} className={`rounded-full border px-3 py-1 text-sm ${form.repeat === r.id ? "border-gold bg-gold text-primary-foreground" : "border-border"}`}>{r.label}</button>)}</div>
         <div className="grid gap-2 sm:grid-cols-2">
           <label className="text-sm"><Bell className="me-1 inline size-4 text-gold" />وقت التذكير<input type="datetime-local" value={form.remind} onChange={(e) => setForm({ ...form, remind: e.target.value })} className="mt-1 h-10 w-full rounded-xl border border-input bg-background px-2" /></label>

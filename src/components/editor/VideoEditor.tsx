@@ -393,8 +393,8 @@ export function VideoEditor({ projectId }: { projectId: string }) {
     await Promise.all(targets(t).filter((x) => x.active && Math.abs(x.el.currentTime - x.at) > 0.02).map((x) => new Promise<void>((r) => { x.el.addEventListener("seeked", () => r(), { once: true }); setTimeout(r, 700); x.el.currentTime = x.at; })));
     draw(t);
   }
-  useEffect(() => { if (!ready || playing.current || exporting != null) return; const id = setTimeout(() => void seek(timeRef.current), 40); return () => clearTimeout(id); }, [proj, ready, full]); // eslint-disable-line react-hooks/exhaustive-deps
-  useEffect(() => { if (exporting == null) setRes(720); }, [setRes, exporting, full]);
+  useEffect(() => { if (!ready || playing.current || exporting != null) return; const id = setTimeout(() => void seek(timeRef.current), 40); return () => clearTimeout(id); }, [proj, ready, full, theater]); // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => { if (exporting == null) setRes(720); }, [setRes, exporting, full, theater]);
 
   function sync(t: number, total: number) {
     const p = projRef.current; const mx = mixer.current;
@@ -627,8 +627,11 @@ export function VideoEditor({ projectId }: { projectId: string }) {
       toast.success(`تم: ${caps.length} سطر متزامن مع كلام الفيديو`);
     } catch (e) { toast.error((e as Error).message); } finally { setBusy(null); setVstt(null); }
   }
+  const pinch = useRef<{ pts: Map<number, { x: number; y: number }>; d0: number; z0: number }>({ pts: new Map(), d0: 0, z0: 1 });
+  const [zoomV, setZoomV] = useState(1);
   async function enterTheater() {
-    setTheater(true);
+    setZoomV(1); setTheater(true);
+    await new Promise((r) => setTimeout(r, 30));
     try { await stageRef.current?.requestFullscreen?.({ navigationUI: "hide" }); } catch { /* iOS */ }
     if (ratio > 1) {
       const o = screen.orientation as ScreenOrientation & { lock?: (o: string) => Promise<void> };
@@ -1002,14 +1005,21 @@ export function VideoEditor({ projectId }: { projectId: string }) {
   const viewerMax = full ? "calc(100dvh - 250px)" : "58vh";
   const viewer = (
     <div className="flex min-h-0 min-w-0 flex-1 flex-col">
-      <div ref={stageRef} className={theater ? "fixed inset-0 z-[90] flex items-center justify-center bg-black" : "relative flex flex-1 items-center justify-center bg-muted/40 p-2"}>
+      {(() => { const stage = (
+      <div ref={stageRef} className={theater ? "fixed inset-0 z-[200] flex items-center justify-center overflow-hidden bg-black" : "relative flex flex-1 items-center justify-center bg-muted/40 p-2"}
+        style={theater ? { touchAction: "none" } : undefined}
+        onPointerDown={(e) => { if (!theater) return; pinch.current.pts.set(e.pointerId, { x: e.clientX, y: e.clientY }); if (pinch.current.pts.size === 2) { const [a, b] = [...pinch.current.pts.values()]; pinch.current.d0 = Math.hypot(a!.x - b!.x, a!.y - b!.y); pinch.current.z0 = zoomV; } }}
+        onPointerMove={(e) => { if (!theater || !pinch.current.pts.has(e.pointerId)) return; pinch.current.pts.set(e.pointerId, { x: e.clientX, y: e.clientY }); if (pinch.current.pts.size === 2 && pinch.current.d0) { const [a, b] = [...pinch.current.pts.values()]; setZoomV(clamp((pinch.current.z0 * Math.hypot(a!.x - b!.x, a!.y - b!.y)) / pinch.current.d0, 1, 5)); } }}
+        onPointerUp={(e) => { pinch.current.pts.delete(e.pointerId); if (pinch.current.pts.size < 2) pinch.current.d0 = 0; }}
+        onPointerCancel={(e) => { pinch.current.pts.delete(e.pointerId); pinch.current.d0 = 0; }}>
         <canvas ref={canvasRef} onPointerDown={onCanvasDown} onPointerMove={onCanvasMove} onPointerUp={() => (dragRef.current = null)} className={`touch-none bg-black ${theater ? "" : "rounded-lg shadow-lg"}`}
-          style={theater ? (rotated ? { aspectRatio: `${ratio}`, width: `min(100dvh, calc(100vw * ${ratio}))`, transform: "rotate(90deg)" } : { aspectRatio: `${ratio}`, width: "100%", maxWidth: `calc(100dvh * ${ratio})`, maxHeight: "100dvh" }) : { aspectRatio: `${ratio}`, width: "100%", maxWidth: `calc(${viewerMax} * ${ratio})`, maxHeight: viewerMax }} />
+          style={theater ? (rotated ? { aspectRatio: `${ratio}`, width: `min(100dvh, calc(100vw * ${ratio}))`, maxWidth: "none", transform: `rotate(90deg) scale(${zoomV})` } : { aspectRatio: `${ratio}`, width: `min(100vw, calc(100dvh * ${ratio}))`, maxWidth: "none", transform: `scale(${zoomV})` }) : { aspectRatio: `${ratio}`, width: "100%", maxWidth: `calc(${viewerMax} * ${ratio})`, maxHeight: viewerMax }} />
         {theater ? <div className="absolute bottom-4 left-1/2 flex -translate-x-1/2 gap-3 opacity-80" style={rotated ? { transform: "translateX(-50%)" } : undefined}>
           <button type="button" onClick={togglePlay} aria-label="تشغيل" className="grid size-12 place-items-center rounded-full bg-background/40 text-foreground backdrop-blur">{isPlaying ? <Pause className="size-6" /> : <Play className="size-6" />}</button>
           <button type="button" onClick={exitTheater} aria-label="خروج من العرض الكامل" className="grid size-12 place-items-center rounded-full bg-background/40 text-foreground backdrop-blur"><Minimize2 className="size-6" /></button>
         </div> : <button type="button" onClick={() => void enterTheater()} aria-label="عرض الفيديو كاملًا" title="عرض كامل (أو اضغط مرتين على الفيديو)" className="absolute bottom-3 left-3 grid size-9 place-items-center rounded-full bg-background/70 text-gold shadow"><Maximize2 className="size-4" /></button>}
-      </div>
+        {theater && zoomV > 1.01 && <button type="button" onClick={() => setZoomV(1)} className="absolute right-4 top-4 rounded-full bg-background/50 px-3 py-1 text-xs text-foreground">{Math.round(zoomV * 100)}% · إعادة</button>}
+      </div>); return theater ? createPortal(stage, document.body) : stage; })()}
       <div className="space-y-1 border-t border-border p-2" dir="rtl">
         <input type="range" min={0} max={Math.max(total, 0.1)} step={0.05} value={time} disabled={isPlaying} onChange={(e) => void seek(+e.target.value)} className="w-full accent-[var(--gold)]" aria-label="الخط الزمني" dir="ltr" />
         <div className="flex flex-wrap items-center gap-1.5">
