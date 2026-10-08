@@ -7,7 +7,15 @@ const schema = z.object({
   action: z.enum(["text", "image", "video"]), idea: z.string().trim().min(1).max(12000), modelId: z.string().max(100),
   width: z.number().int().min(256).max(4096), height: z.number().int().min(256).max(4096), duration: z.number().int().min(3).max(180),
   workflow: z.record(z.unknown()).optional(),
+  previous: z.string().max(60000).optional(), revision: z.string().trim().max(4000).optional(),
 });
+
+// Strongest-first order used when the client asks for automatic model choice.
+const PRIORITY: Record<string, string[]> = {
+  chat: ["llama3.3-70b", "qwen3-32b", "gpt-oss-20b", "mistral-small-3.1", "qwen3-coder-30b", "gemma3-12b", "deepseek-r1", "qwen3-8b", "phi4", "devstral-small"],
+  image: ["qwen-image", "flux-schnell", "sd3.5", "sdxl"],
+  video: ["wan2.2", "hunyuan-video", "skyreels-v2", "ltx-video", "cogvideox", "framepack", "animatediff", "svd"],
+};
 
 export const Route = createFileRoute("/api/ads")({ server: { handlers: { POST: async ({ request }) => {
   const auth = await authVoice(request);
@@ -16,13 +24,28 @@ export const Route = createFileRoute("/api/ads")({ server: { handlers: { POST: a
   if (!parsed.success) return new Response("أدخل فكرة ومقاسات صحيحة", { status: 400 });
   const data = parsed.data;
   const task = data.action === "text" ? "chat" : data.action;
-  const model = AI_MODELS.find((m) => m.id === data.modelId && m.task === task && m.selfHosted);
-  if (!model) return new Response("اختر نموذجًا مفتوحًا مناسبًا", { status: 400 });
   const { data: access, error: accessError } = await auth.sb.rpc("my_workspace_access");
   const permissions = access as Record<string, unknown> | null;
   if (accessError || permissions?.["studio"] !== true) return new Response("لا تملك صلاحية الإعلانات", { status: 403 });
-  if (Array.isArray(permissions["allowed_models"]) && !permissions["allowed_models"].includes(model.id)) return new Response("النموذج غير مسموح لحسابك", { status: 403 });
-  const endpoint = await linkedEndpoint(auth.sb, auth.userId, model.id);
+  const allowed = (id: string) => !Array.isArray(permissions["allowed_models"]) || permissions["allowed_models"].includes(id);
+  let model = AI_MODELS.find((m) => m.id === data.modelId && m.task === task && m.selfHosted);
+  let endpoint: Awaited<ReturnType<typeof linkedEndpoint>> = null;
+  if (data.modelId === "auto") {
+    const ids = [...(PRIORITY[task] ?? []), ...AI_MODELS.filter((m) => m.task === task && m.selfHosted).map((m) => m.id)];
+    // Without an uploaded graph only SDXL can draw images directly.
+    const order = data.action === "image" && !data.workflow ? ["sdxl"] : [...new Set(ids)];
+    for (const id of order) {
+      const candidate = AI_MODELS.find((m) => m.id === id && m.task === task && m.selfHosted);
+      if (!candidate || !allowed(id)) continue;
+      const linked = await linkedEndpoint(auth.sb, auth.userId, id);
+      if (linked) { model = candidate; endpoint = linked; break; }
+    }
+    if (!model) return new Response(data.action === "image" && !data.workflow ? "اربط Stable Diffusion XL أو أرفق مخطط صورة لنموذج مربوط. لم تُستخدم خدمة مدفوعة." : "لا يوجد نموذج مربوط بسيرفرك لهذا النوع. لم تُستخدم خدمة مدفوعة.", { status: 409 });
+  }
+  if (!model) return new Response("اختر نموذجًا مفتوحًا مناسبًا", { status: 400 });
+  if (!allowed(model.id)) return new Response("النموذج غير مسموح لحسابك", { status: 403 });
+  endpoint ??= await linkedEndpoint(auth.sb, auth.userId, model.id);
+  if (data.revision && data.action !== "text") data.idea = `${data.idea}\nالتعديل المطلوب: ${data.revision}`;
   if (!endpoint) return new Response("اربط هذا النموذج بسيرفرك من صفحة النماذج أولًا. لم تُستخدم خدمة مدفوعة.", { status: 409 });
   if (data.action === "image" && model.id !== "sdxl" && !data.workflow) return new Response("أرفق مخطط ComfyUI بصيغة API لتوليد الصورة بهذا النموذج.", { status: 409 });
   if (data.action === "video" && !data.workflow) return new Response("أرفق مخطط الفيديو من ComfyUI بصيغة API أولًا؛ يجب أن يدعم المدة المختارة.", { status: 409 });
