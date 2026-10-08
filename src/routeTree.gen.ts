@@ -24,6 +24,7 @@ import { Route as AuthenticatedStudioRouteImport } from './routes/_authenticated
 import { Route as AuthenticatedTeamRouteImport } from './routes/_authenticated/team'
 import { Route as ApiAdsRouteImport } from './routes/api/ads'
 import { Route as ApiAssistantRouteImport } from './routes/api/assistant'
+import { Route as ApiEditorAiRouteImport } from './routes/api/editor-ai'
 import { Route as ApiSttRouteImport } from './routes/api/stt'
 import { Route as ApiTranslateRouteImport } from './routes/api/translate'
 import { Route as ApiTtsRouteImport } from './routes/api/tts'
@@ -104,6 +105,11 @@ const ApiAssistantRoute = ApiAssistantRouteImport.update({
   path: '/api/assistant',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiEditorAiRoute = ApiEditorAiRouteImport.update({
+  id: '/api/editor-ai',
+  path: '/api/editor-ai',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiSttRoute = ApiSttRouteImport.update({
   id: '/api/stt',
   path: '/api/stt',
@@ -147,6 +153,7 @@ export interface FileRoutesByFullPath {
   '/team': typeof AuthenticatedTeamRoute
   '/api/ads': typeof ApiAdsRoute
   '/api/assistant': typeof ApiAssistantRoute
+  '/api/editor-ai': typeof ApiEditorAiRoute
   '/api/stt': typeof ApiSttRoute
   '/api/translate': typeof ApiTranslateRoute
   '/api/tts': typeof ApiTtsRoute
@@ -167,6 +174,7 @@ export interface FileRoutesByTo {
   '/team': typeof AuthenticatedTeamRoute
   '/api/ads': typeof ApiAdsRoute
   '/api/assistant': typeof ApiAssistantRoute
+  '/api/editor-ai': typeof ApiEditorAiRoute
   '/api/stt': typeof ApiSttRoute
   '/api/translate': typeof ApiTranslateRoute
   '/api/tts': typeof ApiTtsRoute
@@ -190,6 +198,7 @@ export interface FileRoutesById {
   '/_authenticated/team': typeof AuthenticatedTeamRoute
   '/api/ads': typeof ApiAdsRoute
   '/api/assistant': typeof ApiAssistantRoute
+  '/api/editor-ai': typeof ApiEditorAiRoute
   '/api/stt': typeof ApiSttRoute
   '/api/translate': typeof ApiTranslateRoute
   '/api/tts': typeof ApiTtsRoute
@@ -213,6 +222,7 @@ export interface FileRouteTypes {
     | '/team'
     | '/api/ads'
     | '/api/assistant'
+    | '/api/editor-ai'
     | '/api/stt'
     | '/api/translate'
     | '/api/tts'
@@ -233,6 +243,7 @@ export interface FileRouteTypes {
     | '/team'
     | '/api/ads'
     | '/api/assistant'
+    | '/api/editor-ai'
     | '/api/stt'
     | '/api/translate'
     | '/api/tts'
@@ -255,6 +266,7 @@ export interface FileRouteTypes {
     | '/_authenticated/team'
     | '/api/ads'
     | '/api/assistant'
+    | '/api/editor-ai'
     | '/api/stt'
     | '/api/translate'
     | '/api/tts'
@@ -269,6 +281,7 @@ export interface RootRouteChildren {
   ResetPasswordRoute: typeof ResetPasswordRoute
   ApiAdsRoute: typeof ApiAdsRoute
   ApiAssistantRoute: typeof ApiAssistantRoute
+  ApiEditorAiRoute: typeof ApiEditorAiRoute
   ApiSttRoute: typeof ApiSttRoute
   ApiTranslateRoute: typeof ApiTranslateRoute
   ApiTtsRoute: typeof ApiTtsRoute
@@ -381,6 +394,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiAssistantRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/editor-ai': {
+      id: '/api/editor-ai'
+      path: '/api/editor-ai'
+      fullPath: '/api/editor-ai'
+      preLoaderRoute: typeof ApiEditorAiRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/stt': {
       id: '/api/stt'
       path: '/api/stt'
@@ -469,6 +489,7 @@ const rootRouteChildren: RootRouteChildren = {
   ResetPasswordRoute: ResetPasswordRoute,
   ApiAdsRoute: ApiAdsRoute,
   ApiAssistantRoute: ApiAssistantRoute,
+  ApiEditorAiRoute: ApiEditorAiRoute,
   ApiSttRoute: ApiSttRoute,
   ApiTranslateRoute: ApiTranslateRoute,
   ApiTtsRoute: ApiTtsRoute,
