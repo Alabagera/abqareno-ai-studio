@@ -134,6 +134,7 @@ export function VideoEditor({ projectId }: { projectId: string }) {
 
   const update = useCallback((fn: (p: Project) => Project) => setProj((p) => fn(p)), []);
   const toggle = (k: string, force?: boolean) => setOpen((s) => { const n = new Set(full ? [] : s); if (force ?? !n.has(k)) n.add(k); else n.delete(k); return n; });
+  useEffect(() => { if (full && sel?.type === "clip") toggle("clip", true); }, [sel?.id]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // ---------- load & resolve private media links ----------
   useEffect(() => {
