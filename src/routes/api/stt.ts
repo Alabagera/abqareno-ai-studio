@@ -27,7 +27,7 @@ export const Route = createFileRoute("/api/stt")({
       f.append("file", audio, audio.name);
       f.append("response_format", "json");
       f.append("stream", "true");
-      f.append("languages", lang ? lang : "ar,en");
+      for (const l of lang ? [lang] : ["ar", "en"]) f.append("languages[]", l);
       f.append("prompt", "تسجيل بالعربية والإنجليزية وقد يخلط المتحدث بينهما. اكتب العربية بإملاء صحيح وعلامات ترقيم، والإنجليزية بحروف لاتينية.");
       const up = await fetch("https://ai.gateway.lovable.dev/v1/audio/transcriptions", { method: "POST", signal: request.signal, headers: { Authorization: `Bearer ${apiKey}` }, body: f });
       if (!up.ok || !up.body) { const raw = await up.text(); console.error("stt error", up.status, raw.slice(0, 300)); return new Response(raw || "تعذر تحويل الصوت", { status: up.status }); }

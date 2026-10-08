@@ -57,7 +57,7 @@ export class VoiceRecorder {
     const rec = this.rec; if (!rec) return;
     const gap = this.speechStart - this.lastEnd;
     this.lastEnd = performance.now();
-    rec.onstop = () => { if (keep && this.chunks.length) this.ev.onUtterance(new Blob(this.chunks, { type: (rec.mimeType || "audio/webm").split(";")[0] }), gap); };
+    rec.onstop = () => { if (keep && this.chunks.length) this.ev.onUtterance(new Blob(this.chunks, { type: (rec.mimeType || "audio/webm").split(";")[0] ?? "audio/webm" }), gap); };
     rec.stop(); this.rec = null;
   }
 
