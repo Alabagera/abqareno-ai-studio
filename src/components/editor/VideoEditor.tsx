@@ -952,7 +952,7 @@ export function VideoEditor({ projectId }: { projectId: string }) {
     <div className="editor-fullscreen fixed inset-0 z-50 flex flex-col bg-background">
       {toolbar}
       <div className="flex min-h-0 flex-1 flex-row" dir="ltr">
-        <div className="editor-stage flex min-w-0 flex-1 flex-col">{viewer}{strip}</div>
+        <div className="editor-stage flex min-w-0 flex-1 flex-col">{viewer}{strip}<div id="editor-drawer-slot" className="editor-drawer min-h-0 overflow-y-auto border-t border-border bg-popover text-popover-foreground empty:hidden" /></div>
         <aside className="editor-icon-rail relative w-14 shrink-0 overflow-y-auto border-s border-border p-1 sm:w-16">{panel}</aside>
       </div>
     </div>

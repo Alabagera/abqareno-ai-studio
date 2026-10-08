@@ -153,14 +153,13 @@
 .editor-icon-rail .editor-section-toggle { width: 44px; height: 44px; padding: 12px; justify-content: center; }
 .editor-icon-rail .editor-section-toggle > :not(:first-child) { display: none; }
 .editor-icon-rail .editor-section[data-open="true"] .editor-section-toggle { background: var(--secondary); }
-.editor-icon-rail .editor-drawer-heading { display: flex; }
-.editor-icon-rail .editor-section-content { position: fixed; right: 64px; top: 190px; bottom: 0; width: min(350px, calc(100vw - 80px)); overflow-y: auto; background: var(--popover); color: var(--popover-foreground); border: 1px solid var(--border); z-index: 55; }
+.editor-drawer .editor-drawer-heading { display: flex; position: sticky; top: 0; z-index: 2; background: var(--popover); }
+.editor-drawer:not(:empty) { flex: 1 1 45%; }
+.editor-stage > :first-child { min-height: 0; }
 @media (max-width: 767px) {
-  .editor-icon-rail .editor-section-content { top: 48dvh; right: 56px; width: calc(100vw - 64px); }
   .editor-stage > :first-child { flex: 0 0 auto; }
   .editor-stage canvas { max-height: 24dvh !important; width: auto !important; max-width: 100% !important; }
 }
 @media (max-height: 600px) {
-  .editor-icon-rail .editor-section-content { top: 115px; }
   .editor-fullscreen > :first-child { gap: 4px; padding: 4px; }
 }
