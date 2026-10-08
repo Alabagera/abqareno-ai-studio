@@ -107,7 +107,7 @@ function Editor() {
     }
   };
   const fromLibrary = async (a: { kind: string; storage_path: string; name: string }) => {
-    const url = await signedUrl(a.storage_path); if (!url) return toast.error("تعذر فتح الملف");
+    const url = await signedUrl(a.storage_path); if (!url) return void toast.error("تعذر فتح الملف");
     await addSource(a.kind as "video" | "image" | "audio", url, a.name); toast.success("أُضيف إلى الخط الزمني");
   };
 
@@ -210,11 +210,11 @@ function Editor() {
     const finished = playing.current; playing.current = false; setIsPlaying(false);
     return finished;
   }
-  const togglePlay = () => { if (playing.current) { playing.current = false; return; } if (!clips.length) return toast.error("أضف فيديو أو صورة أولًا"); void run(time >= total - 0.05 ? 0 : time); };
+  const togglePlay = () => { if (playing.current) { playing.current = false; return; } if (!clips.length) return void toast.error("أضف فيديو أو صورة أولًا"); void run(time >= total - 0.05 ? 0 : time); };
 
   async function exportVideo() {
-    if (!clips.length) return toast.error("أضف مقاطع أولًا");
-    const fmtDef = FORMATS.find((f) => f.id === format); if (!fmtDef) return toast.error("المتصفح لا يدعم التصدير، جرّب Chrome");
+    if (!clips.length) return void toast.error("أضف مقاطع أولًا");
+    const fmtDef = FORMATS.find((f) => f.id === format); if (!fmtDef) return void toast.error("المتصفح لا يدعم التصدير، جرّب Chrome");
     const c = canvasRef.current!; const q = QUALITIES.find((x) => x.id === quality)!;
     playing.current = false; await frame();
     setRes(quality); setExporting(0); setResult(null);
@@ -228,14 +228,14 @@ function Editor() {
     const ok = await run(0);
     clearInterval(iv); rec.stop(); await stopped; stream.getVideoTracks().forEach((t) => t.stop());
     setRes(720); setExporting(null);
-    if (!ok) return toast("أُلغي التصدير");
-    const blob = new Blob(chunks, { type: fmtDef.id.split(";")[0] });
+    if (!ok) return void toast("أُلغي التصدير");
+    const blob = new Blob(chunks, { type: fmtDef.id.split(";")[0] ?? "video/webm" });
     setResult({ url: URL.createObjectURL(blob), blob, name: `abqarino-${quality}p.${fmtDef.ext}` });
     toast.success("الفيديو جاهز للتنزيل");
   }
   const saveToLibrary = async () => {
     if (!result) return;
-    if (result.blob.size > 20 * 1024 * 1024) return toast.error("الفيديو أكبر من 20 ميجابايت، نزّله على جهازك أو اختر جودة أقل");
+    if (result.blob.size > 20 * 1024 * 1024) return void toast.error("الفيديو أكبر من 20 ميجابايت، نزّله على جهازك أو اختر جودة أقل");
     try { await uploadMedia(new File([result.blob], result.name, { type: result.blob.type }), "video"); toast.success("حُفظ في المكتبة"); } catch (e) { toast.error((e as Error).message); }
   };
 
@@ -243,7 +243,7 @@ function Editor() {
   const move = (i: number, d: number) => setClips((cs) => { const n = [...cs]; const j = i + d; if (j < 0 || j >= n.length) return cs; [n[i], n[j]] = [n[j]!, n[i]!]; return n; });
   const duplicate = (c: Clip) => { const id = uid(); const src = els.current.get(c.id)!; const copy = src instanceof HTMLVideoElement ? Object.assign(document.createElement("video"), { crossOrigin: "anonymous", playsInline: true, preload: "auto", src: c.url }) : src; els.current.set(id, copy); setClips((cs) => { const i = cs.findIndex((x) => x.id === c.id); const n = [...cs]; n.splice(i + 1, 0, { ...c, id }); return n; }); };
   const splitAtPlayhead = () => {
-    const hit = locate(time); if (!hit || hit.lt < 0.2 || clipLen(hit.clip) - hit.lt < 0.2) return toast.error("ضع المؤشر داخل مقطع لقصّه");
+    const hit = locate(time); if (!hit || hit.lt < 0.2 || clipLen(hit.clip) - hit.lt < 0.2) return void toast.error("ضع المؤشر داخل مقطع لقصّه");
     const c = hit.clip; const id = uid();
     if (c.kind === "video") { const cut = c.trimStart + hit.lt * c.speed; els.current.set(id, Object.assign(document.createElement("video"), { crossOrigin: "anonymous", playsInline: true, preload: "auto", src: c.url })); setClips((cs) => cs.flatMap((x) => x.id === c.id ? [{ ...x, trimEnd: cut, fadeOut: 0 }, { ...x, id, trimStart: cut, fadeIn: 0 }] : [x])); }
     else { els.current.set(id, els.current.get(c.id)!); setClips((cs) => cs.flatMap((x) => x.id === c.id ? [{ ...x, imageDuration: hit.lt, fadeOut: 0 }, { ...x, id, imageDuration: x.imageDuration - hit.lt, fadeIn: 0 }] : [x])); }
