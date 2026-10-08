@@ -3,7 +3,8 @@
 
 export interface Asset { path: string | null; url: string; name: string }
 export interface Filters { brightness: number; contrast: number; saturate: number; hue: number; grayscale: number; sepia: number; blur: number }
-export type Transition = "none" | "fade" | "zoom" | "slide" | "blur" | "flash" | "spin" | "wipe" | "circle" | "whip" | "glitch" | "dip" | "push";
+export type Transition = string;
+import { TRANSITION_LIST } from "./transitions";
 export type KeyMode = "none" | "ai" | "chroma";
 export interface Keying { mode: KeyMode; color: string; tolerance: number; softness: number }
 export interface AudioFx { mic: string; gain: number; bass: number; presence: number; air: number; comp: number; clean: number }
@@ -77,10 +78,7 @@ export const PRESETS: { label: string; f: Partial<Filters> }[] = [
   { label: "Bleach Bypass", f: { contrast: 140, saturate: 45 } }, { label: "الساعة الذهبية", f: { sepia: 40, saturate: 130, brightness: 106, hue: -12 } },
   { label: "ليل القمر", f: { hue: 25, saturate: 70, brightness: 85, contrast: 115 } }, { label: "أكشن", f: { contrast: 135, saturate: 115, brightness: 95 } }, { label: "حالم", f: { brightness: 110, saturate: 80, blur: 1 } }, { label: "درامي", f: { contrast: 145, saturate: 70, brightness: 90 } },
 ];
-export const TRANSITIONS: { id: Transition; label: string }[] = [
-  { id: "none", label: "بدون" }, { id: "fade", label: "تلاشي" }, { id: "zoom", label: "تقريب" }, { id: "slide", label: "انزلاق" }, { id: "blur", label: "ضبابي" }, { id: "flash", label: "وميض" }, { id: "spin", label: "دوران" },
-  { id: "wipe", label: "مسح جانبي" }, { id: "circle", label: "دائرة تتسع" }, { id: "whip", label: "انزلاق سريع (Whip)" }, { id: "push", label: "دفع" }, { id: "glitch", label: "تشويش رقمي (Glitch)" }, { id: "dip", label: "عبر الأسود" },
-];
+export const TRANSITIONS: { id: Transition; label: string; group: string }[] = TRANSITION_LIST;
 export const ANIMS: { id: Anim; label: string }[] = [
   { id: "none", label: "بدون" }, { id: "fade", label: "ظهور تدريجي" }, { id: "pop", label: "قفزة" }, { id: "slideUp", label: "صعود" }, { id: "slideSide", label: "دخول جانبي" }, { id: "typewriter", label: "آلة كاتبة" },
 ];
