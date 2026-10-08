@@ -17,7 +17,7 @@ import { Button } from "@/components/ui/button";
 const KEY = "abq-voice-commander";
 type ReplyKey = "ok" | "done" | "working" | "missing";
 const REPLIES: { id: ReplyKey; text: string }[] = [{ id: "ok", text: "حاضر" }, { id: "done", text: "تم التنفيذ" }, { id: "working", text: "جاري إتمام المهمة" }, { id: "missing", text: "لم أجد ما طلبته" }];
-interface Settings { avatar?: string; replies: Partial<Record<ReplyKey, string>> }
+interface Settings { avatar?: string | undefined; replies: Partial<Record<ReplyKey, string>> }
 const load = (): Settings => { try { return { replies: {}, ...JSON.parse(localStorage.getItem(KEY) ?? "{}") } as Settings; } catch { return { replies: {} }; } };
 const norm = (s: string) => s.replace(/[\u064B-\u0652\u0640]/g, "").replace(/[أإآ]/g, "ا").replace(/ة/g, "ه").replace(/ى/g, "ي").toLowerCase();
 const SECTIONS: [RegExp, string][] = [
