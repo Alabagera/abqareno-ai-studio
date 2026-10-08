@@ -29,3 +29,4 @@
 - [x] Illustrated 4-step video guide on dashboard; marketing AI capabilities on homepage.
 - [x] Per-member allowed models; assistant model picker with descriptions and ready templates.
 - [x] Video editor page, studio full-screen preview, open-source video/music/vision/OCR/3D models
+- [x] Editor: voice/script, captions+translation, background/logo/titles, fullscreen side panel, long-press strip reorder, layered audio up to 1000%, PiP, background removal, project library + autosave
