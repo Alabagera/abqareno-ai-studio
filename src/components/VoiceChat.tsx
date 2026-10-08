@@ -159,7 +159,7 @@ function DictatePane({ lang }: { lang: string }) {
     try { await rec.start(); setOn(true); } catch { /* toast */ }
   }
   async function exportAs(f: DocFormat) {
-    if (!paras.length) return toast.error("لا يوجد نص بعد");
+    if (!paras.length) { toast.error("لا يوجد نص بعد"); return; }
     const md = f === "pptx"
       ? `# ${title}\n\n${paras.map((p, i) => `## ${i + 1}\n\n${p.split(/(?<=[.!?؟])\s+/).map((s) => `- ${s}`).join("\n")}`).join("\n\n")}`
       : `<!--theme: primary=#0b1f4b; accent=#c9a227; font=Noto Naskh Arabic-->\n# ${title}\n\n${paras.join("\n\n")}`;
