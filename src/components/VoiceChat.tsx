@@ -148,21 +148,15 @@ function DictatePane({ lang }: { lang: string }) {
   const [title, setTitle] = useState("مستند عبقرينو");
   const [on, setOn] = useState(false);
   const endRef = useRef<HTMLDivElement>(null);
-  const lastText = useRef(0);
   useEffect(() => { endRef.current?.scrollIntoView({ behavior: "smooth" }); }, [paras]);
   // A pause longer than 7 seconds starts a new paragraph.
-  const rec = useRecorder(lang, 1100, (text) => {
-    const now = Date.now();
-    const newPara = !lastText.current || now - lastText.current > 7000 + 2500;
-    lastText.current = now;
-    setParas((p) => newPara || !p.length ? [...p, text] : [...p.slice(0, -1), `${p[p.length - 1]} ${text}`]);
+  const rec = useRecorder(lang, 1100, (text, gap) => {
+    setParas((p) => (!p.length || gap + 1100 > 7000) ? [...p, text] : [...p.slice(0, -1), `${p[p.length - 1]} ${text}`]);
   });
-  const recPause = useRef<number>(0);
-  useEffect(() => { if (rec.hearing) { if (recPause.current && Date.now() - recPause.current > 7000) lastText.current = 1; } else recPause.current = Date.now(); }, [rec.hearing]);
 
   async function toggle() {
     if (on) { rec.stop(); setOn(false); return; }
-    try { await rec.start(); setOn(true); recPause.current = Date.now(); } catch { /* toast */ }
+    try { await rec.start(); setOn(true); } catch { /* toast */ }
   }
   async function exportAs(f: DocFormat) {
     if (!paras.length) return toast.error("لا يوجد نص بعد");
