@@ -33,6 +33,7 @@ type Target = "main" | "overlay" | "audio" | "bg" | "logo";
 type MediaEl = HTMLVideoElement | HTMLImageElement | HTMLAudioElement;
 
 const QUALITIES = [{ id: 480, label: "480p (خفيف)", br: 2.5e6 }, { id: 720, label: "720p HD", br: 6e6 }, { id: 1080, label: "1080p Full HD", br: 12e6 }, { id: 1440, label: "1440p 2K", br: 20e6 }, { id: 2160, label: "2160p 4K", br: 40e6 }, { id: 4320, label: "4320p 8K (جهاز قوي)", br: 80e6 }];
+const BITRATES = [{ id: "standard", label: "قياسي (حجم أصغر)", k: 1 }, { id: "high", label: "عالٍ — يوتيوب/احترافي", k: 1.6 }, { id: "max", label: "أقصى جودة (ملف كبير)", k: 2.5 }];
 const FORMATS = [
   { id: "video/mp4;codecs=avc1.42E01E,mp4a.40.2", label: "MP4 (H.264) — الأكثر توافقًا", ext: "mp4" }, { id: "video/mp4", label: "MP4", ext: "mp4" },
   { id: "video/webm;codecs=vp9,opus", label: "WebM (VP9) — جودة عالية وحجم أصغر", ext: "webm" }, { id: "video/webm;codecs=vp8,opus", label: "WebM (VP8)", ext: "webm" }, { id: "video/webm", label: "WebM", ext: "webm" },
@@ -114,6 +115,7 @@ export function VideoEditor({ projectId }: { projectId: string }) {
   const [full, setFull] = useState(false);
   const [open, setOpen] = useState<Set<string>>(new Set(["media"]));
   const [quality, setQuality] = useState(1080);
+  const [bitrate, setBitrate] = useState("high");
   const [fps, setFps] = useState(30);
   const [format, setFormat] = useState("phone-mp4");
   const [exporting, setExporting] = useState<number | null>(null);
@@ -252,12 +254,18 @@ export function VideoEditor({ projectId }: { projectId: string }) {
         if (clip.transition === "slide") ctx.translate(-(1 - e) * W, 0);
         if (clip.transition === "spin") { ctx.rotate((1 - e) * Math.PI * 0.5); s *= 0.6 + 0.4 * e; }
         if (clip.transition === "blur") extraBlur = (1 - tp) * 24;
+        if (clip.transition === "whip") { ctx.translate((1 - e) * W * 1.2, 0); extraBlur = (1 - tp) * 30; }
+        if (clip.transition === "push") ctx.translate(0, (1 - e) * H);
+        if (clip.transition === "glitch" && tp < 1) { ctx.translate((Math.random() - 0.5) * 60 * (1 - tp), (Math.random() - 0.5) * 12 * (1 - tp)); alpha *= Math.random() > 0.25 ? 1 : 0.4; }
+        if (clip.transition === "wipe" && tp < 1) { ctx.beginPath(); ctx.rect(-W / 2, -H / 2, W * e, H); ctx.clip(); }
+        if (clip.transition === "circle" && tp < 1) { ctx.beginPath(); ctx.arc(0, 0, (Math.hypot(W, H) / 2) * e, 0, Math.PI * 2); ctx.clip(); }
         ctx.rotate((clip.rotate * Math.PI) / 180); if (clip.flipX) ctx.scale(-1, 1);
         ctx.globalAlpha = clamp(alpha);
         const dw = sw * s, dh = sh * s;
         drawMedia(ctx, clip.id, el, clip.key, filterCss({ ...clip.filters, blur: clip.filters.blur + extraBlur }), -dw / 2, -dh / 2, dw, dh);
         ctx.restore();
         if (clip.transition === "flash" && tp < 1) { ctx.fillStyle = `rgba(255,255,255,${1 - tp})`; ctx.fillRect(0, 0, W, H); }
+        if (clip.transition === "dip" && tp < 1) { ctx.fillStyle = `rgba(0,0,0,${1 - tp})`; ctx.fillRect(0, 0, W, H); }
       }
     }
     ctx.restore();
@@ -348,6 +356,14 @@ export function VideoEditor({ projectId }: { projectId: string }) {
 
     if (p.brand.vignette > 0) { const g = ctx.createRadialGradient(W / 2, H / 2, Math.min(W, H) * 0.35, W / 2, H / 2, Math.hypot(W, H) / 2); g.addColorStop(0, "rgba(0,0,0,0)"); g.addColorStop(1, `rgba(0,0,0,${p.brand.vignette / 100})`); ctx.fillStyle = g; ctx.fillRect(0, 0, W, H); }
     if (p.brand.grain > 0) { ctx.save(); ctx.globalAlpha = p.brand.grain / 100; ctx.globalCompositeOperation = "overlay"; const pat = ctx.createPattern(grain(), "repeat"); if (pat) { ctx.translate(Math.random() * 160, Math.random() * 160); ctx.fillStyle = pat; ctx.fillRect(-160, -160, W + 320, H + 320); } ctx.restore(); }
+    // Pro grade: glow, colour tint, camera shake and global fades.
+    const b = p.brand;
+    if ((b.bloom ?? 0) > 0) { ctx.save(); ctx.globalCompositeOperation = "screen"; ctx.globalAlpha = (b.bloom ?? 0) / 160; ctx.filter = `blur(${Math.round(Math.min(W, H) / 60)}px) brightness(1.2)`; ctx.drawImage(ctx.canvas, 0, 0); ctx.restore(); }
+    if ((b.tintStrength ?? 0) > 0 && b.tint) { ctx.save(); ctx.globalCompositeOperation = "soft-light"; ctx.globalAlpha = (b.tintStrength ?? 0) / 100; ctx.fillStyle = b.tint; ctx.fillRect(0, 0, W, H); ctx.restore(); }
+    if ((b.shake ?? 0) > 0) { const k = ((b.shake ?? 0) / 100) * Math.min(W, H) * 0.012; ctx.save(); ctx.globalCompositeOperation = "copy"; ctx.drawImage(ctx.canvas, Math.sin(t * 23) * k, Math.cos(t * 17) * k); ctx.restore(); }
+    const fs = b.fadeStart ?? 0, fe = b.fadeEnd ?? 0; const end = totalLen(p);
+    const black = Math.max(fs > 0 ? 1 - t / fs : 0, fe > 0 ? 1 - (end - t) / fe : 0);
+    if (black > 0) { ctx.fillStyle = `rgba(0,0,0,${clamp(black)})`; ctx.fillRect(0, 0, W, H); }
     rects.current = hits;
   }
 
@@ -387,6 +403,10 @@ export function VideoEditor({ projectId }: { projectId: string }) {
       let fade = 1;
       if (a.fadeIn > 0) fade = Math.min(fade, rel / a.fadeIn);
       if (a.fadeOut > 0) fade = Math.min(fade, (a.loop ? total - t : len - rel) / a.fadeOut);
+      // Auto-ducking: lower music and effects while any voice layer speaks.
+      if (a.kind !== "voice" && (p.duck ?? 100) < 100 && p.audios.some((v) => v.kind === "voice" && !v.muted && t >= v.start && t < v.start + audLen(v))) fade *= (p.duck ?? 100) / 100;
+      if ((p.audioFadeIn ?? 0) > 0) fade *= clamp(t / (p.audioFadeIn ?? 1));
+      if ((p.audioFadeOut ?? 0) > 0) fade *= clamp((total - t) / (p.audioFadeOut ?? 1));
       mx?.apply(el, a.audio, fade, a.muted);
     }
     mx?.setMaster(p.masterGain);
@@ -581,7 +601,7 @@ export function VideoEditor({ projectId }: { projectId: string }) {
     await seek(0);
     await mixer.current.resume();
     const capture = c.captureStream(fps); stream = capture; mixer.current.dest.stream.getAudioTracks().forEach((tr) => capture.addTrack(tr));
-    rec = new MediaRecorder(stream, { mimeType: fmtDef.id, videoBitsPerSecond: q.br, audioBitsPerSecond: 320000 });
+    rec = new MediaRecorder(stream, { mimeType: fmtDef.id, videoBitsPerSecond: Math.round(q.br * (BITRATES.find((x) => x.id === bitrate)?.k ?? 1)), audioBitsPerSecond: 320000 });
     const chunks: Blob[] = []; rec.ondataavailable = (e) => { if (e.data.size) chunks.push(e.data); };
     const recorder = rec;
     const stopped = new Promise<void>((resolve, reject) => { recorder.onstop = () => resolve(); recorder.onerror = () => reject(new Error("تعذر تسجيل هذه الجودة؛ جرّب 720p أو جهازًا أقوى")); });
@@ -764,6 +784,8 @@ export function VideoEditor({ projectId }: { projectId: string }) {
           <div className="flex gap-2"><Button size="sm" variant="glass" onClick={duplicateSelected}><Copy className="size-3" />تكرار</Button><Button size="sm" variant="ghost" onClick={removeSelected}><Trash2 className="size-3" />حذف</Button></div>
         </div>}
         <Range label="مستوى الصوت العام للفيديو" min={0} max={400} value={proj.masterGain} suffix="%" onChange={(v) => update((p) => ({ ...p, masterGain: v }))} />
+        <Range label="خفض الموسيقى تلقائيًا عند الكلام (Ducking)" min={0} max={100} value={proj.duck ?? 100} suffix="%" onChange={(v) => update((p) => ({ ...p, duck: v }))} />
+        <div className="grid grid-cols-2 gap-2"><Range label="ظهور الصوت كله" min={0} max={10} step={0.1} suffix="s" value={proj.audioFadeIn ?? 0} onChange={(v) => update((p) => ({ ...p, audioFadeIn: v }))} /><Range label="اختفاء الصوت كله" min={0} max={10} step={0.1} suffix="s" value={proj.audioFadeOut ?? 0} onChange={(v) => update((p) => ({ ...p, audioFadeOut: v }))} /></div>
       </Section>
 
       <Section title="النص المنطوق على الشاشة والترجمة" icon={<Captions className="size-4" />} open={open.has("captions")} onToggle={() => toggle("captions")} badge={<span className="text-[10px] text-muted-foreground">{proj.captions.length}</span>}>
@@ -837,7 +859,14 @@ export function VideoEditor({ projectId }: { projectId: string }) {
           <Range label="إطار معتم (Vignette)" min={0} max={100} value={proj.brand.vignette} onChange={(vignette) => setBrand({ vignette })} />
           <Range label="حبيبات الفيلم" min={0} max={100} value={proj.brand.grain} onChange={(grain) => setBrand({ grain })} />
           <Check label="أشرطة سينمائية" checked={proj.brand.letterbox} onChange={(letterbox) => setBrand({ letterbox })} />
+          <Range label="توهج سينمائي (Glow)" min={0} max={100} value={proj.brand.bloom ?? 0} onChange={(bloom) => setBrand({ bloom })} />
+          <Range label="اهتزاز الكاميرا" min={0} max={100} value={proj.brand.shake ?? 0} onChange={(shake) => setBrand({ shake })} />
+          <Range label="ظهور من الأسود" min={0} max={5} step={0.1} suffix="s" value={proj.brand.fadeStart ?? 0} onChange={(fadeStart) => setBrand({ fadeStart })} />
+          <Range label="اختفاء للأسود" min={0} max={5} step={0.1} suffix="s" value={proj.brand.fadeEnd ?? 0} onChange={(fadeEnd) => setBrand({ fadeEnd })} />
         </div>
+        <b>تدرج لوني للفيديو كاملًا</b>
+        <div className="flex flex-wrap gap-1">{[["#FF8A3D", "برتقالي دافئ"], ["#1FA2B8", "تيل سينمائي"], ["#FFD27A", "ذهبي"], ["#4A6CFF", "أزرق ليلي"], ["#FF4FA3", "وردي"], ["#3DDC84", "أخضر ماتريكس"]].map(([c, l]) => <button type="button" key={c} onClick={() => setBrand({ tint: c, tintStrength: proj.brand.tintStrength || 35 })} className={`flex items-center gap-1 rounded-md border px-2 py-1 ${proj.brand.tint === c ? "border-gold" : "border-border"}`}><span className="size-3 rounded-full" style={{ background: c }} />{l}</button>)}</div>
+        <Range label="قوة التدرج" min={0} max={100} value={proj.brand.tintStrength ?? 0} suffix="%" onChange={(tintStrength) => setBrand({ tintStrength })} />
         <div className="flex items-center justify-between"><b>العناوين والنصوص</b><Button size="sm" variant="glass" onClick={addText}><Plus className="size-3" />عنوان</Button></div>
         <div className="flex flex-wrap gap-1">{proj.texts.map((t) => <button type="button" key={t.id} onClick={() => setSel({ type: "text", id: t.id })} className={`max-w-[160px] truncate rounded-md border px-2 py-1 ${sel?.id === t.id ? "border-gold" : "border-border"}`} dir="auto">{t.text}</button>)}</div>
         {selText && <div className="space-y-2 rounded-lg border border-gold/40 p-2">
@@ -862,7 +891,8 @@ export function VideoEditor({ projectId }: { projectId: string }) {
         <div className="grid grid-cols-2 gap-2">
           <Sel label="الصيغة" value={format} onChange={setFormat} options={supported.length ? [{ id: "phone-mp4", label: "MP4 للهاتف — H.264 + AAC" }, ...supported.map((f) => ({ id: f.id, label: f.label }))] : [{ id: "", label: "غير مدعوم في هذا المتصفح" }]} />
           <Sel label="الجودة" value={String(quality)} onChange={(v) => setQuality(+v)} options={QUALITIES.map((q) => ({ id: String(q.id), label: q.label }))} />
-          <Sel label="الإطارات في الثانية" value={String(fps)} onChange={(v) => setFps(+v)} options={[24, 25, 30, 60].map((f) => ({ id: String(f), label: `${f} fps` }))} />
+          <Sel label="الإطارات في الثانية" value={String(fps)} onChange={(v) => setFps(+v)} options={[24, 25, 30, 50, 60].map((f) => ({ id: String(f), label: f === 24 ? "24 fps سينمائي" : f === 60 ? "60 fps سلس جدًا" : `${f} fps` }))} />
+          <Sel label="معدل البت" value={bitrate} onChange={setBitrate} options={BITRATES.map((b) => ({ id: b.id, label: b.label }))} />
         </div>
         <p className="text-muted-foreground">MP4 للهاتف يستخدم H.264 وAAC. جودات 4K و8K تحتاج جهازًا قويًا ومتصفحًا يدعم ترميزها؛ زيادة الدقة لا تضيف تفاصيل للمصدر. حد الحفظ 20 ميجابايت.</p>
         {exporting != null ? <div className="space-y-2"><div className="h-2 overflow-hidden rounded bg-secondary"><div className="h-full bg-gold transition-all" style={{ width: `${exporting}%` }} /></div><Button size="sm" variant="glass" onClick={() => (playing.current = false)}>إلغاء ({exporting}%)</Button></div>

@@ -3,7 +3,7 @@
 
 export interface Asset { path: string | null; url: string; name: string }
 export interface Filters { brightness: number; contrast: number; saturate: number; hue: number; grayscale: number; sepia: number; blur: number }
-export type Transition = "none" | "fade" | "zoom" | "slide" | "blur" | "flash" | "spin";
+export type Transition = "none" | "fade" | "zoom" | "slide" | "blur" | "flash" | "spin" | "wipe" | "circle" | "whip" | "glitch" | "dip" | "push";
 export type KeyMode = "none" | "ai" | "chroma";
 export interface Keying { mode: KeyMode; color: string; tolerance: number; softness: number }
 export interface AudioFx { mic: string; gain: number; bass: number; presence: number; air: number; comp: number; clean: number }
@@ -32,10 +32,14 @@ export interface TextItem { id: string; text: string; start: number; end: number
 export interface Branding {
   bgColor: string; bgImage: Asset | null; bgBlur: boolean; logo: Asset | null; logoX: number; logoY: number; logoSize: number; logoOpacity: number;
   vignette: number; grain: number; letterbox: boolean;
+  /** Optional pro grade: whole-frame tint, glow, shake and fades. */
+  tint?: string; tintStrength?: number; bloom?: number; shake?: number; fadeStart?: number; fadeEnd?: number;
 }
 export interface Project {
   version: 1; sizeId: string; clips: Clip[]; overlays: Overlay[]; audios: AudioLayer[]; captions: Caption[]; captionStyle: CaptionStyle; texts: TextItem[];
   brand: Branding; script: string; voice: string; masterGain: number;
+  /** Music/sfx level (%) while a voice layer plays; 100 = no ducking. */
+  duck?: number; audioFadeIn?: number; audioFadeOut?: number;
 }
 
 export const NO_FILTERS: Filters = { brightness: 100, contrast: 100, saturate: 100, hue: 0, grayscale: 0, sepia: 0, blur: 0 };
@@ -67,10 +71,15 @@ export const AUDIO_PRESETS: { label: string; fx: AudioFx }[] = [
 export const PRESETS: { label: string; f: Partial<Filters> }[] = [
   { label: "بدون", f: {} }, { label: "سينمائي", f: { contrast: 120, saturate: 85, sepia: 15 } }, { label: "دافئ", f: { saturate: 120, sepia: 30, hue: -10 } },
   { label: "بارد", f: { hue: 15, saturate: 90, brightness: 105 } }, { label: "أبيض وأسود", f: { grayscale: 100, contrast: 115 } }, { label: "حيوي", f: { saturate: 150, contrast: 110 } },
-  { label: "قديم", f: { sepia: 70, contrast: 90 } }, { label: "حالم", f: { brightness: 110, saturate: 80, blur: 1 } }, { label: "درامي", f: { contrast: 145, saturate: 70, brightness: 90 } },
+  { label: "قديم", f: { sepia: 70, contrast: 90 } }, { label: "تيل وبرتقالي (هوليوود)", f: { contrast: 118, saturate: 125, hue: -8, sepia: 12 } },
+  { label: "Kodak دافئ", f: { contrast: 108, saturate: 115, sepia: 22, brightness: 103 } }, { label: "Fuji ناعم", f: { contrast: 95, saturate: 110, hue: 6, brightness: 104 } },
+  { label: "نوار أسود", f: { grayscale: 100, contrast: 160, brightness: 85 } }, { label: "مطفي (Matte)", f: { contrast: 82, saturate: 88, brightness: 108 } },
+  { label: "Bleach Bypass", f: { contrast: 140, saturate: 45 } }, { label: "الساعة الذهبية", f: { sepia: 40, saturate: 130, brightness: 106, hue: -12 } },
+  { label: "ليل القمر", f: { hue: 25, saturate: 70, brightness: 85, contrast: 115 } }, { label: "أكشن", f: { contrast: 135, saturate: 115, brightness: 95 } }, { label: "حالم", f: { brightness: 110, saturate: 80, blur: 1 } }, { label: "درامي", f: { contrast: 145, saturate: 70, brightness: 90 } },
 ];
 export const TRANSITIONS: { id: Transition; label: string }[] = [
   { id: "none", label: "بدون" }, { id: "fade", label: "تلاشي" }, { id: "zoom", label: "تقريب" }, { id: "slide", label: "انزلاق" }, { id: "blur", label: "ضبابي" }, { id: "flash", label: "وميض" }, { id: "spin", label: "دوران" },
+  { id: "wipe", label: "مسح جانبي" }, { id: "circle", label: "دائرة تتسع" }, { id: "whip", label: "انزلاق سريع (Whip)" }, { id: "push", label: "دفع" }, { id: "glitch", label: "تشويش رقمي (Glitch)" }, { id: "dip", label: "عبر الأسود" },
 ];
 export const ANIMS: { id: Anim; label: string }[] = [
   { id: "none", label: "بدون" }, { id: "fade", label: "ظهور تدريجي" }, { id: "pop", label: "قفزة" }, { id: "slideUp", label: "صعود" }, { id: "slideSide", label: "دخول جانبي" }, { id: "typewriter", label: "آلة كاتبة" },
