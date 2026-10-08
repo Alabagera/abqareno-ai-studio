@@ -53,7 +53,7 @@ async function toPdf(body: string, theme: DocTheme, name: string) {
     .doc pre{background:#0f172a;color:#e2e8f0;padding:10px;border-radius:6px;direction:ltr;white-space:pre-wrap}
     .doc a{color:${theme.primary}}</style><div class="doc">${html}</div>`;
   const html2pdf = (await import("html2pdf.js")).default;
-  await html2pdf().set({ margin: 8, filename: `${name}.pdf`, image: { type: "jpeg", quality: 0.95 }, html2canvas: { scale: 2, useCORS: true }, jsPDF: { unit: "mm", format: "a4" }, pagebreak: { mode: ["css", "legacy"] } }).from(el).save();
+  await html2pdf().set({ margin: 8, filename: `${name}.pdf`, image: { type: "jpeg", quality: 0.95 }, html2canvas: { scale: 2, useCORS: true }, jsPDF: { unit: "mm", format: "a4" } } as Record<string, unknown>).from(el).save();
 }
 
 async function toDocx(tokens: Token[], theme: DocTheme, name: string) {
@@ -65,14 +65,14 @@ async function toDocx(tokens: Token[], theme: DocTheme, name: string) {
   for (const t of tokens) {
     if (t.type === "heading") {
       const h = t as Tokens.Heading;
-      children.push(para(h.text, { heading: h.depth === 1 ? d.HeadingLevel.HEADING_1 : h.depth === 2 ? d.HeadingLevel.HEADING_2 : d.HeadingLevel.HEADING_3, border: h.depth === 1 ? { bottom: { color: noHash(theme.accent), size: 12, style: d.BorderStyle.SINGLE, space: 4 } } : undefined }, { bold: true, size: h.depth === 1 ? 40 : h.depth === 2 ? 32 : 26, color: noHash(h.depth > 2 ? theme.accent : theme.primary) }));
+      children.push(para(h.text, { heading: h.depth === 1 ? d.HeadingLevel.HEADING_1 : h.depth === 2 ? d.HeadingLevel.HEADING_2 : d.HeadingLevel.HEADING_3, ...(h.depth === 1 ? { border: { bottom: { color: noHash(theme.accent), size: 12, style: d.BorderStyle.SINGLE, space: 4 } } } : {}) }, { bold: true, size: h.depth === 1 ? 40 : h.depth === 2 ? 32 : 26, color: noHash(h.depth > 2 ? theme.accent : theme.primary) }));
     } else if (t.type === "paragraph") children.push(para((t as Tokens.Paragraph).text, {}, { size: 24 }));
     else if (t.type === "list") for (const item of (t as Tokens.List).items) children.push(para(item.text, { bullet: { level: 0 } }, { size: 24 }));
     else if (t.type === "blockquote") children.push(para((t as Tokens.Blockquote).text, { shading: { fill: "FFFBEB" } }, { italics: true, size: 24 }));
     else if (t.type === "code") for (const line of (t as Tokens.Code).text.split("\n")) children.push(new d.Paragraph({ shading: { fill: "F1F5F9" }, children: [new d.TextRun({ text: line, font: "Consolas", size: 20 })] }));
     else if (t.type === "table") {
       const tb = t as Tokens.Table;
-      const cell = (text: string, head: boolean) => new d.TableCell({ shading: head ? { fill: noHash(theme.primary) } : undefined, children: [para(text, {}, { bold: head, color: head ? "FFFFFF" : noHash(theme.text), size: 22 })] });
+      const cell = (text: string, head: boolean) => new d.TableCell({ ...(head ? { shading: { fill: noHash(theme.primary) } } : {}), children: [para(text, {}, { bold: head, color: head ? "FFFFFF" : noHash(theme.text), size: 22 })] });
       children.push(new d.Table({ width: { size: 100, type: d.WidthType.PERCENTAGE }, visuallyRightToLeft: rtl(tb.raw), rows: [new d.TableRow({ tableHeader: true, children: tb.header.map((h) => cell(h.text, true)) }), ...tb.rows.map((r) => new d.TableRow({ children: r.map((c) => cell(c.text, false)) }))] }));
       children.push(new d.Paragraph({}));
     }
