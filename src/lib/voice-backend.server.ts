@@ -20,3 +20,13 @@ export async function linkedEndpoint(sb: SupabaseClient, userId: string, modelId
   const { data } = await supabaseAdmin.from("model_endpoints").select("endpoint_url, access_token, enabled").eq("owner_id", ownerId as string).eq("model_id", modelId).maybeSingle();
   return data?.enabled && data.endpoint_url ? { url: data.endpoint_url.replace(/\/$/, ""), token: data.access_token } : null;
 }
+
+/** Fail closed: any linked model locks this workspace out of paid fallbacks. */
+export async function selfHostedOnly(sb: SupabaseClient, userId: string) {
+  const { data: ownerId, error } = await sb.rpc("workspace_owner_id", { _user_id: userId });
+  if (error || !ownerId) throw new Error("تعذر التحقق من إعدادات مساحة العمل");
+  const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+  const result = await supabaseAdmin.from("model_endpoints").select("model_id").eq("owner_id", ownerId as string).eq("enabled", true).neq("endpoint_url", "").limit(1);
+  if (result.error) throw result.error;
+  return Boolean(result.data?.length);
+}

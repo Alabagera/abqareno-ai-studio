@@ -2,15 +2,16 @@ import { useState, type ReactNode } from "react";
 import { ChevronDown } from "lucide-react";
 import { AUDIO_PRESETS, MICS, NO_FILTERS, PRESETS, type AudioFx, type Filters, type Keying } from "@/lib/editor/types";
 import { segmenterState, loadSegmenter } from "@/lib/editor/keying";
+import { Button } from "@/components/ui/button";
 
 export function Section({ title, icon, open, onToggle, children, badge }: { title: string; icon: ReactNode; open: boolean; onToggle: () => void; children: ReactNode; badge?: ReactNode }) {
   return (
-    <div className="rounded-xl border border-border bg-card/50">
-      <button type="button" onClick={onToggle} className="flex w-full items-center gap-2 p-3 text-start text-sm font-bold">
+    <div className="editor-section rounded-lg border border-border bg-card/50" data-open={open}>
+      <Button type="button" variant="ghost" onClick={onToggle} title={title} aria-label={title} aria-expanded={open} className="editor-section-toggle flex h-auto w-full items-center justify-start gap-2 whitespace-normal p-3 text-start text-sm font-bold">
         <span className="text-gold">{icon}</span><span className="flex-1">{title}</span>{badge}
         <ChevronDown className={`size-4 transition-transform ${open ? "rotate-180" : ""}`} />
-      </button>
-      {open && <div className="space-y-3 border-t border-border p-3 text-xs">{children}</div>}
+      </Button>
+      {open && <div className="editor-section-content space-y-3 border-t border-border p-3 text-xs">{children}</div>}
     </div>
   );
 }

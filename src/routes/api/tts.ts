@@ -1,5 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { authVoice, linkedEndpoint } from "@/lib/voice-backend.server";
+import { authVoice, linkedEndpoint, selfHostedOnly } from "@/lib/voice-backend.server";
 import { z } from "zod";
 
 // Professional spoken replies for the voice chat. Returns a complete WAV clip.
@@ -19,7 +19,9 @@ export const Route = createFileRoute("/api/tts")({
       const r = await fetch(`${xtts.url}/tts_to_audio/`, { method: "POST", headers: { "Content-Type": "application/json", ...(xtts.token ? { Authorization: `Bearer ${xtts.token}` } : {}) }, body: JSON.stringify({ text: parsed.data.text, speaker_wav: "abqarino", language: isAr ? "ar" : "en" }) }).catch(() => null);
       if (r?.ok && r.body) return new Response(r.body, { headers: { "Content-Type": r.headers.get("content-type") ?? "audio/wav", "Cache-Control": "no-cache", "X-Voice-Engine": "xtts" } });
       console.error("xtts failed", r?.status);
+      return new Response("تعذر تشغيل صوت سيرفرك؛ لم تُستخدم خدمة مدفوعة. تحقق من XTTS.", { status: 502 });
     }
+    if (await selfHostedOnly(auth.sb, auth.userId)) return new Response("اربط نموذج الصوت المفتوح أولًا؛ الخدمات المدفوعة متوقفة لمساحة عملك.", { status: 409 });
     if (!apiKey) return new Response("الخدمة غير مهيأة", { status: 500 });
     const styled = isAr
       ? `اقرأ النص التالي بصوت إذاعي واضح وقوي ودافئ، بنطق عربي فصيح وسليم وإيقاع طبيعي: ${parsed.data.text}`

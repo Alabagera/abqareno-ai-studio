@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { z } from "zod";
-import { authVoice } from "@/lib/voice-backend.server";
+import { authVoice, linkedEndpoint, selfHostedOnly } from "@/lib/voice-backend.server";
 
 // Translates editor captions in one request (strict JSON output, streamed upstream).
 const body = z.object({ texts: z.array(z.string().max(1000)).min(1).max(200), target: z.string().min(2).max(10) });
@@ -12,6 +12,15 @@ export const Route = createFileRoute("/api/translate")({
     if (!auth) return new Response("يلزم تسجيل الدخول", { status: 401 });
     const parsed = body.safeParse(await request.json().catch(() => null));
     if (!parsed.success) return new Response("طلب غير صالح", { status: 400 });
+    const linked = await linkedEndpoint(auth.sb, auth.userId, "libretranslate");
+    if (linked) {
+      const response = await fetch(`${linked.url}/translate`, { method: "POST", signal: request.signal, headers: { "Content-Type": "application/json", ...(linked.token ? { Authorization: `Bearer ${linked.token}` } : {}) }, body: JSON.stringify({ q: parsed.data.texts, source: "auto", target: parsed.data.target, format: "text" }) }).catch(() => null);
+      if (!response?.ok) return new Response("تعذر الوصول إلى مترجم سيرفرك؛ لم تُستخدم خدمة مدفوعة.", { status: 502 });
+      const translated = await response.json() as { translatedText?: string[] };
+      if (!Array.isArray(translated.translatedText) || translated.translatedText.length !== parsed.data.texts.length) return new Response("المترجم أعاد نتيجة غير مكتملة", { status: 502 });
+      return Response.json({ translations: translated.translatedText });
+    }
+    if (await selfHostedOnly(auth.sb, auth.userId)) return new Response("اربط LibreTranslate لترجمة المقاطع؛ الخدمات المدفوعة متوقفة.", { status: 409 });
     const apiKey = process.env["LOVABLE_API_KEY"];
     if (!apiKey) return new Response("الخدمة غير مهيأة", { status: 500 });
     const lang = NAMES[parsed.data.target] ?? parsed.data.target;

@@ -2,6 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { createClient } from "@supabase/supabase-js";
 import { z } from "zod";
 import { AI_MODELS } from "@/lib/ai/registry";
+import { selfHostedOnly } from "@/lib/voice-backend.server";
 
 const bodySchema = z.object({
   threadId: z.string().uuid(),
@@ -34,7 +35,7 @@ export const Route = createFileRoute("/api/assistant")({
     const url = process.env["SUPABASE_URL"];
     const key = process.env["SUPABASE_PUBLISHABLE_KEY"];
     const apiKey = process.env["LOVABLE_API_KEY"];
-    if (!url || !key || !apiKey) return new Response("الخدمة غير مهيأة", { status: 500 });
+    if (!url || !key) return new Response("الخدمة غير مهيأة", { status: 500 });
     if (token.split(".").length !== 3) return new Response("يلزم تسجيل الدخول", { status: 401 });
     const sb = createClient(url, key, { global: { headers: { Authorization: `Bearer ${token}` } }, auth: { persistSession: false, autoRefreshToken: false } });
     const { data: authData, error: authError } = await sb.auth.getUser(token);
@@ -44,6 +45,8 @@ export const Route = createFileRoute("/api/assistant")({
     const { threadId, content, mode, assetIds, modelId } = parsed.data;
     const model = AI_MODELS.find((m) => m.id === modelId && m.task === "chat");
     if (!model) return new Response("هذا النموذج غير متاح في المساعد", { status: 400 });
+    if (model.status === "ready" && await selfHostedOnly(sb, authData.user.id)) return new Response("الخدمات المدفوعة متوقفة بعد ربط نماذجك. اختر نموذج مساعد مفتوحًا مربوطًا بسيرفرك.", { status: 409 });
+    if (model.status === "ready" && !apiKey) return new Response("الخدمة غير مهيأة", { status: 500 });
     const { data: access } = await sb.rpc("my_workspace_access");
     const allowed = (access as Record<string, unknown> | null)?.["allowed_models"];
     if (Array.isArray(allowed) && !allowed.includes(model.id)) return new Response("ليس لديك صلاحية استخدام هذا النموذج", { status: 403 });
@@ -88,7 +91,7 @@ export const Route = createFileRoute("/api/assistant")({
       if (model.status === "ready") {
         const upstream = await fetch("https://ai.gateway.lovable.dev/v1/responses", {
           method: "POST", signal: request.signal,
-          headers: { "Content-Type": "application/json", "Lovable-API-Key": apiKey, "X-Lovable-AIG-SDK": "fetch" },
+          headers: { "Content-Type": "application/json", "Lovable-API-Key": apiKey ?? "", "X-Lovable-AIG-SDK": "fetch" },
           body: JSON.stringify({ model: model.id, input: [{ role: "system", content: systemText }, ...input], stream: true, store: false, reasoning: { effort: "low", summary: "auto" }, include: ["reasoning.encrypted_content"] }),
         });
         if (!upstream.ok || !upstream.body) {
