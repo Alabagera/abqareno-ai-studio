@@ -49,6 +49,8 @@ type OverlayPosition = { x: number; y: number; s?: number; w?: number };
 
 function Studio() {
   const qc = useQueryClient();
+  const [full, setFull] = useState(false);
+  useEffect(() => { const k = (e: KeyboardEvent) => e.key === "Escape" && setFull(false); window.addEventListener("keydown", k); return () => window.removeEventListener("keydown", k); }, []);
   const navigate = useNavigate();
   const [title, setTitle] = useState("");
   const [script, setScript] = useState("");
