@@ -17,4 +17,4 @@
 - Member navigation and model disclosure derive from the database-backed `my_workspace_access` function so client state cannot elevate permissions.
 - Self-hosted model server URLs are stored per owner in `model_endpoints` (owner-only RLS) so models change without rebuilding.
 - Assistant conversations persist as workspace-scoped threads with route-derived IDs; message files remain private library assets.
-- The video editor renders and exports entirely in the browser (canvas + MediaRecorder) so editing works without a GPU server; AI video models plug in later via the registry.
+- The video editor renders, mixes audio and exports entirely in the browser (canvas + Web Audio + MediaRecorder); projects persist as serialized JSON in `editor_projects` with media referenced by library path plus a localStorage backup for sudden exits.
