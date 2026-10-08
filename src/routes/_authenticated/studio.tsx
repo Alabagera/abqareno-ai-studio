@@ -92,6 +92,7 @@ function Studio() {
   const [rate, setRate] = useState(1);
   const [pitch, setPitch] = useState(1);
   const [speaking, setSpeaking] = useState(false);
+  const speechAudio = useRef<HTMLAudioElement | null>(null);
   const [titlePos, setTitlePos] = useState<OverlayPosition>({ x: 0.5, y: 0.12 });
   const [extraPos, setExtraPos] = useState<OverlayPosition>({ x: 0.5, y: 0.48 });
   const [captionPos, setCaptionPos] = useState<OverlayPosition>({ x: 0.5, y: 0.78 });
@@ -149,20 +150,20 @@ function Studio() {
     finally { setBusy(null); }
   }
 
-  function speak() {
-    const synth = window.speechSynthesis;
-    if (!synth) { toast.error("متصفحك لا يدعم تجربة النطق"); return; }
-    if (speaking) { synth.cancel(); setSpeaking(false); return; }
+  async function speak() {
+    if (speaking) { speechAudio.current?.pause(); setSpeaking(false); return; }
     if (!script.trim()) { toast.error("اكتب النص أولًا"); return; }
-    const hasArabic = /[\u0600-\u06ff]/.test(script);
-    const speechLanguage = scriptLanguage === "auto" ? (hasArabic ? "ar" : "en") : scriptLanguage;
-    const u = new SpeechSynthesisUtterance(script);
-    u.lang = speechLanguage === "ar" ? "ar-SA" : "en-US"; u.rate = rate; u.pitch = pitch;
-    const v = synth.getVoices().find((x) => x.lang.toLowerCase().startsWith(speechLanguage));
-    if (v) u.voice = v;
-    u.onend = () => setSpeaking(false);
-    u.onerror = () => setSpeaking(false);
-    synth.cancel(); synth.speak(u); setSpeaking(true);
+    setSpeaking(true);
+    try {
+      const token = (await supabase.auth.getSession()).data.session?.access_token;
+      const response = await fetch("/api/tts", { method: "POST", headers: { "Content-Type": "application/json", Authorization: `Bearer ${token ?? ""}` }, body: JSON.stringify({ text: script.slice(0, 1500) }) });
+      if (!response.ok) throw new Error(await response.text());
+      const url = URL.createObjectURL(await response.blob());
+      const audio = new Audio(url); speechAudio.current = audio; audio.playbackRate = rate;
+      audio.onended = () => { URL.revokeObjectURL(url); setSpeaking(false); };
+      audio.onerror = () => { URL.revokeObjectURL(url); setSpeaking(false); toast.error("تعذر تشغيل الصوت"); };
+      await audio.play();
+    } catch (e) { setSpeaking(false); toast.error((e as Error).message); }
   }
 
   async function save(status: "draft" | "queued"): Promise<void> {

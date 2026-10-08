@@ -12,7 +12,7 @@ import { Button } from "@/components/ui/button";
 
 export const Route = createFileRoute("/_authenticated/editor")({
   validateSearch: (s: Record<string, unknown>) => ({ p: typeof s["p"] === "string" ? (s["p"] as string) : undefined }),
-  head: () => ({ meta: [{ title: "محرر الفيديو — عبقرينو AI Studio" }, { name: "description", content: "صناعة الفيديو وتعديله بطبقات وصوت احترافي وترجمة، مع مكتبة مشاريع وحفظ تلقائي." }] }),
+  head: () => ({ meta: [{ title: "محرر الفيديو — عبقرينو AI Studio" }, { name: "description", content: "صناعة الفيديو وتعديله بطبقات وصوت احترافي وترجمة، مع مكتبة مشاريع وحفظ تلقائي." }, { property: "og:title", content: "محرر الفيديو — عبقرينو AI Studio" }, { property: "og:description", content: "محرر عربي بطبقات صوت وصورة وحفظ تلقائي وتصدير MP4." }, { property: "og:type", content: "website" }, { name: "twitter:card", content: "summary_large_image" }] }),
   component: EditorPage,
 });
 
