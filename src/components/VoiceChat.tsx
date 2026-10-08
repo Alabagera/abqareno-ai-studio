@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { Mic, MicOff, X, Volume2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { AlabageraPortrait } from "@/components/AlabageraPortrait";
+import { supabase } from "@/integrations/supabase/client";
 
 type Phase = "idle" | "listening" | "thinking" | "speaking";
 type SR = { lang: string; interimResults: boolean; continuous: boolean; start: () => void; stop: () => void; abort: () => void; onresult: ((e: { results: ArrayLike<ArrayLike<{ transcript: string }> & { isFinal: boolean }> }) => void) | null; onend: (() => void) | null; onerror: ((e: { error: string }) => void) | null };
@@ -20,33 +21,58 @@ export function VoiceChat({ onAsk, onClose }: { onAsk: (text: string) => Promise
   const [reply, setReply] = useState("");
   const [auto, setAuto] = useState(true);
   const recRef = useRef<SR | null>(null);
+  const audioRef = useRef<HTMLAudioElement | null>(null);
+  const speakCtrl = useRef<AbortController | null>(null);
+  const [voice, setVoice] = useState<"Charon" | "Kore" | "Orus" | "Aoede">("Charon");
   const activeRef = useRef(true);
   const supported = typeof window !== "undefined" && ("SpeechRecognition" in window || "webkitSpeechRecognition" in window);
 
-  useEffect(() => () => { activeRef.current = false; recRef.current?.abort(); window.speechSynthesis?.cancel(); }, []);
+  useEffect(() => () => { activeRef.current = false; recRef.current?.abort(); speakCtrl.current?.abort(); audioRef.current?.pause(); window.speechSynthesis?.cancel(); }, []);
 
-  function speak(text: string) {
+  async function tts(text: string, signal: AbortSignal) {
+    const token = (await supabase.auth.getSession()).data.session?.access_token ?? "";
+    const r = await fetch("/api/tts", { method: "POST", signal, headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` }, body: JSON.stringify({ text, voice }) });
+    if (!r.ok) throw new Error((await r.text()) || "تعذر توليد الصوت");
+    return URL.createObjectURL(await r.blob());
+  }
+  function playUrl(url: string) {
     return new Promise<void>((resolve) => {
-      const synth = window.speechSynthesis;
-      if (!synth) return resolve();
-      synth.cancel();
-      const parts = cleanForSpeech(text).match(/[^.!?؟。\n]{1,220}[.!?؟。]?/g) ?? [];
-      const voices = synth.getVoices();
-      const isAr = /[\u0600-\u06FF]/.test(text);
-      const voice = voices.find((v) => v.lang.startsWith(isAr ? "ar" : "en") && /natural|google|online/i.test(v.name)) ?? voices.find((v) => v.lang.startsWith(isAr ? "ar" : "en"));
-      if (!parts.length) return resolve();
-      parts.forEach((p, i) => {
-        const u = new SpeechSynthesisUtterance(p);
-        u.lang = isAr ? "ar-SA" : "en-US"; if (voice) u.voice = voice; u.rate = 1; u.pitch = 1;
-        if (i === parts.length - 1) { u.onend = () => resolve(); u.onerror = () => resolve(); }
-        synth.speak(u);
-      });
+      const a = audioRef.current ?? new Audio(); audioRef.current = a;
+      a.src = url; a.onended = () => { URL.revokeObjectURL(url); resolve(); }; a.onerror = () => resolve();
+      a.play().catch(() => resolve());
     });
   }
+  function browserSpeak(text: string) {
+    return new Promise<void>((resolve) => {
+      const synth = window.speechSynthesis; if (!synth) return resolve();
+      const u = new SpeechSynthesisUtterance(text); u.lang = /[\u0600-\u06FF]/.test(text) ? "ar-SA" : "en-US";
+      u.onend = () => resolve(); u.onerror = () => resolve(); synth.speak(u);
+    });
+  }
+  async function speak(text: string) {
+    stopAudio();
+    const ctrl = new AbortController(); speakCtrl.current = ctrl;
+    const parts = (cleanForSpeech(text).match(/[^.!?؟。\n]{1,400}[.!?؟。]?/g) ?? []).map((p) => p.trim()).filter(Boolean).slice(0, 12);
+    // Merge short sentences so each clip sounds natural; prefetch the next clip while one plays.
+    const chunks: string[] = [];
+    for (const p of parts) { const last = chunks[chunks.length - 1]; if (last && last.length + p.length < 300) chunks[chunks.length - 1] = `${last} ${p}`; else chunks.push(p); }
+    let next: Promise<string> | null = chunks[0] ? tts(chunks[0], ctrl.signal) : null;
+    for (let i = 0; i < chunks.length && !ctrl.signal.aborted; i++) {
+      let url: string;
+      try { url = await next!; } catch (e) { if (ctrl.signal.aborted) return; console.error(e); await browserSpeak(chunks.slice(i).join(" ")); return; }
+      next = chunks[i + 1] ? tts(chunks[i + 1]!, ctrl.signal) : null;
+      next?.catch(() => undefined);
+      if (ctrl.signal.aborted) return;
+      await playUrl(url);
+    }
+  }
+  function stopAudio() { speakCtrl.current?.abort(); audioRef.current?.pause(); window.speechSynthesis?.cancel(); }
 
   function listen() {
     if (!supported) return;
-    window.speechSynthesis?.cancel();
+    stopAudio();
+    // Unlock audio playback on phones during the user's tap.
+    if (!audioRef.current) { const a = new Audio(); a.src = "data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQAAAAA="; a.play().catch(() => undefined); audioRef.current = a; }
     const Ctor = ((window as unknown as Record<string, unknown>)["SpeechRecognition"] ?? (window as unknown as Record<string, unknown>)["webkitSpeechRecognition"]) as new () => SR;
     const rec = new Ctor();
     rec.lang = lang; rec.interimResults = true; rec.continuous = false;
@@ -75,7 +101,7 @@ export function VoiceChat({ onAsk, onClose }: { onAsk: (text: string) => Promise
 
   function toggleMic() {
     if (phase === "listening") { recRef.current?.stop(); return; }
-    if (phase === "speaking") { window.speechSynthesis.cancel(); listen(); return; }
+    if (phase === "speaking") { stopAudio(); listen(); return; }
     if (phase === "idle") listen();
   }
 
@@ -85,6 +111,7 @@ export function VoiceChat({ onAsk, onClose }: { onAsk: (text: string) => Promise
       <div className="flex gap-1 rounded-full bg-secondary p-1 text-xs">
         {(["ar-SA", "en-US"] as const).map((l) => <button key={l} type="button" onClick={() => setLang(l)} className={`rounded-full px-3 py-1 ${lang === l ? "bg-gold text-primary-foreground" : ""}`}>{l === "ar-SA" ? "العربية" : "English"}</button>)}
       </div>
+      <select value={voice} onChange={(e) => setVoice(e.target.value as typeof voice)} aria-label="صوت عبقرينو" className="rounded-full bg-secondary px-2 py-1 text-xs"><option value="Charon">صوت رجالي عميق</option><option value="Orus">صوت رجالي حازم</option><option value="Kore">صوت نسائي واضح</option><option value="Aoede">صوت نسائي دافئ</option></select>
       <label className="flex items-center gap-1 text-xs text-muted-foreground"><input type="checkbox" checked={auto} onChange={(e) => setAuto(e.target.checked)} className="accent-[var(--gold)]" />محادثة مستمرة</label>
       <Button variant="ghost" size="icon" onClick={onClose} aria-label="إغلاق الدردشة الصوتية"><X /></Button>
     </div>
