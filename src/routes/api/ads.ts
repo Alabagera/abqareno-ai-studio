@@ -59,6 +59,7 @@ export const Route = createFileRoute("/api/ads")({ server: { handlers: { POST: a
         const response = await fetch(`${endpoint.url}/v1/chat/completions`, { method: "POST", signal: request.signal, headers: { ...headers, "Content-Type": "application/json" }, body: JSON.stringify({ model: model.setup?.split(" ").pop() ?? model.id, stream: true, messages: [
           { role: "system", content: "أنت متخصص إعلانات. اكتب بالعربية أو لغة الفكرة: نص إعلان جاهز، عنوان، دعوة للفعل، سيناريو فيديو بالثواني، وصف صورة، تحليل وضوح العرض وقوة الرسالة، الجمهور المحتمل والمنصات المناسبة مع أسباب، اختبارات A/B ونصائح ومقاييس نجاح. لا تختلق فوائد أو أسعارًا أو بيانات سوق أو نتائج مضمونة؛ صرّح بالافتراضات، واطلب المعلومات الناقصة. لا تذكر أسماء النماذج." },
           { role: "user", content: `${data.idea}\nمدة الفيديو: ${data.duration} ثانية. المقاس: ${data.width}×${data.height}.` },
+          ...(data.revision && data.previous ? [{ role: "assistant", content: data.previous }, { role: "user", content: `عدّل الإعلان السابق حسب الطلب التالي وأعد كتابته كاملًا: ${data.revision}` }] : []),
         ] }) });
         if (!response.ok || !response.body) throw new Error(`سيرفر المساعد أعاد خطأ ${response.status}؛ لم تُستخدم خدمة مدفوعة.`);
         const reader = response.body.getReader(); const dec = new TextDecoder(); let buffer = "", answer = "";
@@ -137,7 +138,7 @@ export const Route = createFileRoute("/api/ads")({ server: { handlers: { POST: a
         if (!signed.data?.signedUrl) throw new Error("تم الحفظ لكن تعذر فتح الناتج");
         emit({ type: "asset", kind: data.action, path, name, url: signed.data.signedUrl });
       }
-      emit({ type: "done" });
+      emit({ type: "done", model: model.id });
     } catch (error) { if (!request.signal.aborted) emit({ type: "error", message: error instanceof Error ? error.message : "تعذر إنشاء الإعلان" }); }
     finally { if (!closed) { try { controller.close(); } catch { /* browser closed */ } } }
   } });
