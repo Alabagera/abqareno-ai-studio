@@ -2,7 +2,7 @@
 // inference server (URL saved per model in `model_endpoints`). The UI only
 // reads from this list, so swapping or adding models never requires a rebuild.
 
-export type ModelTask = "chat" | "image" | "image_edit" | "docs" | "slides" | "tts" | "enhance" | "avatar" | "transcribe" | "translate" | "compose";
+export type ModelTask = "chat" | "image" | "image_edit" | "video" | "video_edit" | "docs" | "slides" | "tts" | "enhance" | "avatar" | "transcribe" | "translate" | "music" | "vision" | "ocr" | "3d" | "compose";
 
 export interface AiModel {
   id: string;
@@ -25,6 +25,8 @@ export const TASK_LABELS: Record<ModelTask, string> = {
   chat: "مساعد الكتابة والأعمال العامة",
   image: "توليد صور احترافية من نص",
   image_edit: "تعديل الصور",
+  video: "صناعة فيديو بالذكاء الاصطناعي",
+  video_edit: "تعديل وتحسين الفيديو",
   docs: "تحويل المستندات بين الصيغ",
   slides: "العروض التقديمية",
   tts: "تحويل النص إلى صوت واستنساخ الصوت",
@@ -32,6 +34,10 @@ export const TASK_LABELS: Record<ModelTask, string> = {
   avatar: "تحريك الوجه ومزامنة الشفاه",
   transcribe: "تفريغ الصوت إلى نص",
   translate: "الترجمة",
+  music: "الموسيقى والمؤثرات الصوتية",
+  vision: "فهم الصور وتحليلها",
+  ocr: "قراءة النصوص من الصور والمستندات",
+  "3d": "مجسمات ثلاثية الأبعاد",
   compose: "تركيب الفيديو",
 };
 
