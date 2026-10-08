@@ -23,7 +23,10 @@ describe("Self-hosted workspaces never fall back to paid AI", () => {
   });
   it("blocks paid transcription if Whisper is not linked", async () => {
     const fetcher = vi.spyOn(globalThis, "fetch"); const form = new FormData(); form.append("file", new File(["audio"], "audio.webm", { type: "audio/webm" }));
-    const result = await call(stt, new Request("http://localhost/api/stt", { method: "POST", body: form }));
+    const request = new Request("http://localhost/api/stt", { method: "POST", body: form });
+    // Keep the test File in this DOM realm; Node's multipart parser returns a different File constructor.
+    vi.spyOn(request, "formData").mockResolvedValue(form);
+    const result = await call(stt, request);
     expect(result.status).toBe(409); expect(fetcher).not.toHaveBeenCalled();
   });
   it("blocks paid translation if local translation is not linked", async () => {
