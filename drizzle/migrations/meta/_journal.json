@@ -50,6 +50,13 @@
       "when": 1791427965941,
       "tag": "0006_editor_projects",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1791496372571,
+      "tag": "0007_personal_workspaces_and_model_managers",
+      "breakpoints": true
     }
   ]
 }
