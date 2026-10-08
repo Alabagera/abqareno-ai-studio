@@ -19,15 +19,15 @@ type Endpoint = { model_id: string; endpoint_url: string; access_token: string |
 
 function Models() {
   const { data: access } = useQuery({ queryKey: ["workspace-access"], queryFn: async () => (await supabase.rpc("my_workspace_access")).data as Record<string, boolean> | null });
-  const { data: isOwner } = useQuery({ queryKey: ["is-owner"], queryFn: async () => {
+  const { data: isOwner } = useQuery({ queryKey: ["can-manage-models"], queryFn: async () => {
     const { data: u } = await supabase.auth.getUser();
     if (!u.user) return false;
-    return (await supabase.rpc("has_role", { _user_id: u.user.id, _role: "owner" })).data === true;
+    return (await supabase.rpc("can_manage_models")).data === true;
   } });
   const { data: endpoints } = useQuery({ queryKey: ["model-endpoints"], enabled: isOwner === true, queryFn: async () => ((await supabase.from("model_endpoints").select("model_id, endpoint_url, access_token, enabled, last_status")).data ?? []) as Endpoint[] });
   const tasks = Object.keys(TASK_LABELS) as ModelTask[];
   if (access && !access["models"]) return <div className="glass rounded-2xl p-8 text-center text-muted-foreground">لم يمنحك المدير صلاحية عرض هذه الصفحة.</div>;
-  const showNames = isOwner === true || access?.["show_model_names"] === true;
+  const showNames = isOwner === true || access?.["show_model_names"] === true || access?.["models"] === true;
   return (
     <div>
       <PageHeader title="النماذج والأدوات" subtitle="اربط كل نموذج مفتوح بجهازك — بدون إعادة بناء الموقع" />
@@ -70,7 +70,8 @@ function EndpointEditor({ model, ep }: { model: AiModel; ep: Endpoint | undefine
   async function save() {
     setBusy(true);
     const { data: u } = await supabase.auth.getUser();
-    const { error } = await supabase.from("model_endpoints").upsert({ owner_id: u.user!.id, model_id: model.id, endpoint_url: url.trim(), access_token: token.trim() || null, enabled, updated_at: new Date().toISOString() }, { onConflict: "owner_id,model_id" });
+    const { data: ownerId } = await supabase.rpc("workspace_owner_id", { _user_id: u.user!.id });
+    const { error } = await supabase.from("model_endpoints").upsert({ owner_id: (ownerId as string | null) ?? u.user!.id, model_id: model.id, endpoint_url: url.trim(), access_token: token.trim() || null, enabled, updated_at: new Date().toISOString() }, { onConflict: "owner_id,model_id" });
     setBusy(false);
     if (error) { toast.error(error.message); return; }
     toast.success("تم الحفظ");
