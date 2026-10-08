@@ -26,7 +26,7 @@ export const Route = createFileRoute("/api/ads")({ server: { handlers: { POST: a
   const task = data.action === "text" ? "chat" : data.action;
   const { data: access, error: accessError } = await auth.sb.rpc("my_workspace_access");
   const permissions = access as Record<string, unknown> | null;
-  if (accessError || permissions?.["studio"] !== true) return new Response("لا تملك صلاحية الإعلانات", { status: 403 });
+  if (accessError || !(permissions?.["ads"] === true || (permissions?.["ads"] === undefined && permissions?.["studio"] === true))) return new Response("لا تملك صلاحية الإعلانات", { status: 403 });
   const allowed = (id: string) => !Array.isArray(permissions["allowed_models"]) || permissions["allowed_models"].includes(id);
   let model = AI_MODELS.find((m) => m.id === data.modelId && m.task === task && m.selfHosted);
   let endpoint: Awaited<ReturnType<typeof linkedEndpoint>> = null;

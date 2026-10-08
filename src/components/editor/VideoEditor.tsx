@@ -134,6 +134,7 @@ export function VideoEditor({ projectId }: { projectId: string }) {
 
   const update = useCallback((fn: (p: Project) => Project) => setProj((p) => fn(p)), []);
   const toggle = (k: string, force?: boolean) => setOpen((s) => { const n = new Set(full ? [] : s); if (force ?? !n.has(k)) n.add(k); else n.delete(k); return n; });
+  useEffect(() => { if (full && sel?.type === "clip") toggle("clip", true); }, [sel?.id]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // ---------- load & resolve private media links ----------
   useEffect(() => {
@@ -679,7 +680,7 @@ export function VideoEditor({ projectId }: { projectId: string }) {
       </Section>
 
       {selClip && (
-        <Section title="تعديل المقطع المحدد" icon={<Scissors className="size-4" />} open onToggle={() => setSel(null)} badge={<span className="truncate text-[10px] text-muted-foreground" dir="auto">{selClip.asset.name}</span>}>
+        <Section title="تعديل المقطع المحدد" icon={<Scissors className="size-4" />} open={!full || open.has("clip")} onToggle={() => (full ? toggle("clip") : setSel(null))} badge={<span className="truncate text-[10px] text-muted-foreground" dir="auto">{selClip.asset.name}</span>}>
           {selClip.kind === "video" ? <div className="grid grid-cols-2 gap-2">
             <Range label="بداية القص" min={0} max={selClip.natural} step={0.1} value={selClip.trimStart} suffix="s" onChange={(v) => updClip(selClip.id, { trimStart: Math.min(v, selClip.trimEnd - 0.2) })} />
             <Range label="نهاية القص" min={0} max={selClip.natural} step={0.1} value={selClip.trimEnd} suffix="s" onChange={(v) => updClip(selClip.id, { trimEnd: Math.max(v, selClip.trimStart + 0.2) })} />

@@ -48,6 +48,8 @@ export const Route = createFileRoute("/api/assistant")({
     if (model.status === "ready" && await selfHostedOnly(sb, authData.user.id)) return new Response("الخدمات المدفوعة متوقفة بعد ربط نماذجك. اختر نموذج مساعد مفتوحًا مربوطًا بسيرفرك.", { status: 409 });
     if (model.status === "ready" && !apiKey) return new Response("الخدمة غير مهيأة", { status: 500 });
     const { data: access } = await sb.rpc("my_workspace_access");
+    const perms = access as Record<string, unknown> | null;
+    if (!(perms?.["assistant"] === true || (perms?.["assistant"] === undefined && perms?.["studio"] === true))) return new Response("لم يمنحك المدير صلاحية المساعد", { status: 403 });
     const allowed = (access as Record<string, unknown> | null)?.["allowed_models"];
     if (Array.isArray(allowed) && !allowed.includes(model.id)) return new Response("ليس لديك صلاحية استخدام هذا النموذج", { status: 403 });
     const { data: thread, error: threadError } = await sb.from("assistant_threads").select("id, title").eq("id", threadId).single();
