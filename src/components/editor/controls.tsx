@@ -1,5 +1,5 @@
 import { useState, type ReactNode } from "react";
-import { ChevronDown } from "lucide-react";
+import { ChevronDown, X } from "lucide-react";
 import { AUDIO_PRESETS, MICS, NO_FILTERS, PRESETS, type AudioFx, type Filters, type Keying } from "@/lib/editor/types";
 import { segmenterState, loadSegmenter } from "@/lib/editor/keying";
 import { Button } from "@/components/ui/button";
@@ -11,7 +11,7 @@ export function Section({ title, icon, open, onToggle, children, badge }: { titl
         <span className="text-gold">{icon}</span><span className="flex-1">{title}</span>{badge}
         <ChevronDown className={`size-4 transition-transform ${open ? "rotate-180" : ""}`} />
       </Button>
-      {open && <div className="editor-section-content space-y-3 border-t border-border p-3 text-xs">{children}</div>}
+      {open && <div className="editor-section-content space-y-3 border-t border-border p-3 text-xs"><div className="editor-drawer-heading hidden items-center justify-between gap-2"><b>{title}</b><Button variant="ghost" size="icon" aria-label="إغلاق الأدوات" onClick={onToggle}><X className="size-4" /></Button></div>{children}</div>}
     </div>
   );
 }
