@@ -6,7 +6,7 @@ import { signedUrl } from "@/lib/media";
 // between app pages (not after closing the tab). Results persist locally.
 export type AdKind = "text" | "image" | "video";
 export type AdAsset = { kind: "image" | "video"; url: string; path: string; name: string };
-export type AdParams = { idea: string; modelId: string; width: number; height: number; duration: number; workflow?: Record<string, unknown>; revision?: string };
+export type AdParams = { idea: string; modelId: string; width: number; height: number; duration: number; workflow?: Record<string, unknown> | undefined; revision?: string | undefined };
 export type ChatMsg = { role: "user" | "assistant"; text: string };
 type Status = "idle" | "running" | "done" | "error";
 export type AdState = {
