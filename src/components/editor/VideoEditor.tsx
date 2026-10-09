@@ -59,6 +59,17 @@ function animOf(anim: Anim, since: number, until: number, len: number) {
   return r;
 }
 
+/** "Fit screen" keeps the added video's own aspect, long side capped at 1920. */
+function fitSize(w: number, h: number) {
+  const k = Math.min(1, 1920 / Math.max(w, h)); const even = (n: number) => Math.max(2, Math.round((n * k) / 2) * 2);
+  return { id: "fit", platform: "ملاءمة الشاشة", label: "مقاس الفيديو الأصلي", ratio: `${even(w)}×${even(h)}`, w: even(w), h: even(h) };
+}
+async function probeDims(kind: "video" | "image", url: string): Promise<[number, number]> {
+  if (kind === "image") { const im = new Image(); im.src = url; await im.decode().catch(() => undefined); return [im.naturalWidth, im.naturalHeight]; }
+  const v = document.createElement("video"); v.preload = "metadata"; v.muted = true; v.src = url;
+  await new Promise<void>((r) => { v.onloadedmetadata = () => r(); v.onerror = () => r(); setTimeout(r, 6000); });
+  return [v.videoWidth, v.videoHeight];
+}
 async function probe(kind: "video" | "audio" | "image", url: string) {
   if (kind === "image") return 0;
   const el = document.createElement(kind);
@@ -132,7 +143,8 @@ export function VideoEditor({ projectId }: { projectId: string }) {
   const titleRef = useRef(title); titleRef.current = title;
   const history = useRef<{ past: string[]; future: string[]; skip: boolean; last: string }>({ past: [], future: [], skip: false, last: "" });
 
-  const size = SOCIAL_SIZES.find((s) => s.id === proj.sizeId) ?? SOCIAL_SIZES[0]!;
+  const fitSrc = proj.clips.find((c) => c.w && c.h);
+  const size = proj.sizeId === "fit" ? fitSize(fitSrc?.w ?? 1920, fitSrc?.h ?? 1080) : SOCIAL_SIZES.find((s) => s.id === proj.sizeId) ?? SOCIAL_SIZES[0]!;
   const ratio = size.w / size.h;
   const total = totalLen(proj);
   const supported = typeof MediaRecorder === "undefined" ? [] : FORMATS.filter((f) => MediaRecorder.isTypeSupported(f.id));
@@ -495,7 +507,8 @@ export function VideoEditor({ projectId }: { projectId: string }) {
       update((p) => ({ ...p, overlays: [...p.overlays, o] })); setSel({ type: "overlay", id }); toggle("pip", true);
       return id;
     }
-    const c: Clip = { id, kind, asset, natural, trimStart: 0, trimEnd: natural, imageDuration: 4, speed: 1, fit: kind === "image" ? "cover" : "contain", kenBurns: kind === "image", transition: projRef.current.clips.length ? "fade" : "none", fadeIn: 0, fadeOut: 0, muted: false, flipX: false, rotate: 0, zoom: 100, filters: { ...NO_FILTERS }, key: { ...NO_KEY }, audio: { ...FLAT_AUDIO } };
+    const [w, h] = await probeDims(kind, asset.url);
+    const c: Clip = { id, kind, asset, natural, w: w || undefined, h: h || undefined, trimStart: 0, trimEnd: natural, imageDuration: 4, speed: 1, fit: kind === "image" ? "cover" : "contain", kenBurns: kind === "image", transition: projRef.current.clips.length ? "fade" : "none", fadeIn: 0, fadeOut: 0, muted: false, flipX: false, rotate: 0, zoom: 100, filters: { ...NO_FILTERS }, key: { ...NO_KEY }, audio: { ...FLAT_AUDIO } };
     update((p) => ({ ...p, clips: [...p.clips, c] })); setSel({ type: "clip", id });
     return id;
   }
@@ -552,6 +565,11 @@ export function VideoEditor({ projectId }: { projectId: string }) {
     const id = uid(); loadFont("Cairo");
     update((p) => ({ ...p, texts: [...p.texts, { id, text: "عنوان الفيديو", start: time, end: Math.max(time + 4, Math.min(total, time + 4)), x: 50, y: 15, size: 84, color: "#FFFFFF", bg: "transparent", font: "Cairo", bold: true, anim: "pop" }] }));
     setSel({ type: "text", id }); toggle("brand", true);
+  };
+  const addSticker = (text: string, s: Partial<TextItem> = {}, symbol = false) => {
+    const id = uid(); if (s.font) loadFont(s.font);
+    update((p) => ({ ...p, texts: [...p.texts, { id, text, start: time, end: Math.min(Math.max(total, time + 4), time + 4), x: 50, y: symbol ? 50 : 20, size: symbol ? 120 : 72, color: "#FFFFFF", bg: "transparent", font: "Cairo", bold: true, anim: "pop", ...s }] }));
+    setSel({ type: "text", id }); toggle("brand", true); toast.success(symbol ? "أُضيف الرمز — اسحبه في المعاينة" : "أُضيف مربع النص — اسحبه في المعاينة");
   };
   const snapshot = () => { const c = canvasRef.current; if (!c) return; c.toBlob((b) => { if (!b) return; const a = document.createElement("a"); a.href = URL.createObjectURL(b); a.download = `لقطة-${Date.now()}.png`; a.click(); }, "image/png"); };
 
@@ -969,6 +987,7 @@ export function VideoEditor({ projectId }: { projectId: string }) {
         <div className="flex flex-wrap gap-1">{([["#FF8A3D", "برتقالي دافئ"], ["#1FA2B8", "تيل سينمائي"], ["#FFD27A", "ذهبي"], ["#4A6CFF", "أزرق ليلي"], ["#FF4FA3", "وردي"], ["#3DDC84", "أخضر ماتريكس"]] as const).map(([c, l]) => <button type="button" key={c} onClick={() => setBrand({ tint: c, tintStrength: proj.brand.tintStrength || 35 })} className={`flex items-center gap-1 rounded-md border px-2 py-1 ${proj.brand.tint === c ? "border-gold" : "border-border"}`}><span className="size-3 rounded-full" style={{ background: c }} />{l}</button>)}</div>
         <Range label="قوة التدرج" min={0} max={100} value={proj.brand.tintStrength ?? 0} suffix="%" onChange={(tintStrength) => setBrand({ tintStrength })} />
         <div className="flex items-center justify-between"><b>العناوين والنصوص</b><Button size="sm" variant="glass" onClick={addText}><Plus className="size-3" />عنوان</Button></div>
+        <StickerLibrary onAdd={addSticker} />
         <div className="flex flex-wrap gap-1">{proj.texts.map((t) => <button type="button" key={t.id} onClick={() => setSel({ type: "text", id: t.id })} className={`max-w-[160px] truncate rounded-md border px-2 py-1 ${sel?.id === t.id ? "border-gold" : "border-border"}`} dir="auto">{t.text}</button>)}</div>
         {selText && <div className="space-y-2 rounded-lg border border-gold/40 p-2">
           <textarea dir="auto" value={selText.text} onChange={(e) => updText(selText.id, { text: e.target.value })} className="bilingual-text min-h-16 w-full rounded-md border border-input bg-background p-2 text-sm" />
@@ -977,6 +996,7 @@ export function VideoEditor({ projectId }: { projectId: string }) {
             <Range label="ينتهي" min={0} max={Math.max(total, 1)} step={0.1} value={selText.end} suffix="s" onChange={(v) => updText(selText.id, { end: v })} />
             <Range label="أفقيًا" min={0} max={100} value={selText.x} suffix="%" onChange={(v) => updText(selText.id, { x: v })} />
             <Range label="عموديًا" min={0} max={100} value={selText.y} suffix="%" onChange={(v) => updText(selText.id, { y: v })} />
+            <div className="col-span-2 flex flex-wrap items-center gap-1 text-[11px]"><span className="text-muted-foreground">تحريك دقيق:</span>{([["↑", 0, -0.5], ["↓", 0, 0.5], ["→", 0.5, 0], ["←", -0.5, 0]] as const).map(([l, dx, dy]) => <button type="button" key={l} className="rounded-md border border-border px-2 py-1" onClick={() => updText(selText.id, { x: Math.min(100, Math.max(0, +(selText.x + dx).toFixed(1))), y: Math.min(100, Math.max(0, +(selText.y + dy).toFixed(1))) })}>{l}</button>)}<button type="button" className="rounded-md border border-border px-2 py-1" onClick={() => updText(selText.id, { x: 50, y: 50 })}>توسيط</button><span dir="ltr">{selText.x.toFixed(1)}% · {selText.y.toFixed(1)}%</span></div>
             <Range label="الحجم" min={16} max={240} value={selText.size} onChange={(v) => updText(selText.id, { size: v })} />
             <Sel label="الحركة" value={selText.anim} onChange={(anim) => updText(selText.id, { anim })} options={ANIMS.map((a) => ({ id: a.id, label: a.label }))} />
             <Sel label="الخط" value={selText.font} onChange={(font) => { loadFont(font); updText(selText.id, { font }); }} options={FONTS.map((f) => ({ id: f, label: f }))} />
@@ -1015,7 +1035,7 @@ export function VideoEditor({ projectId }: { projectId: string }) {
       <Link to="/editor" search={{ p: undefined }} className="inline-flex items-center gap-1 rounded-md border border-border px-2 py-1.5 text-xs hover:border-gold"><LibraryBig className="size-4" />مكتبة المحرر</Link>
       <input dir="auto" value={title} onChange={(e) => setTitle(e.target.value)} className="h-8 min-w-[120px] flex-1 rounded-md border border-input bg-background px-2 text-sm font-bold" aria-label="اسم المشروع" />
       <span className={`text-[11px] ${saveState === "error" ? "text-destructive" : "text-muted-foreground"}`}>{saveState === "saved" ? "✓ محفوظ" : saveState === "saving" ? "جارٍ الحفظ…" : "تعذر الحفظ (نسخة محلية محفوظة)"}</span>
-      <select value={proj.sizeId} onChange={(e) => update((p) => ({ ...p, sizeId: e.target.value }))} className="h-8 max-w-[170px] rounded-md border border-input bg-background px-1 text-xs">{SOCIAL_SIZES.filter((s) => s.id !== "custom").map((s) => <option key={s.id} value={s.id}>{s.platform} · {s.label} {s.ratio}</option>)}</select>
+      <select value={proj.sizeId} onChange={(e) => update((p) => ({ ...p, sizeId: e.target.value }))} className="h-8 max-w-[170px] rounded-md border border-input bg-background px-1 text-xs"><option value="fit">ملاءمة الشاشة · مقاس الفيديو الأصلي{proj.sizeId === "fit" ? ` ${size.ratio}` : ""}</option>{SOCIAL_SIZES.filter((s) => s.id !== "custom").map((s) => <option key={s.id} value={s.id}>{s.platform} · {s.label} {s.ratio}</option>)}</select>
       <Button size="sm" variant="ghost" onClick={undo} aria-label="تراجع"><Undo2 className="size-4" /></Button>
       <Button size="sm" variant="ghost" onClick={redo} aria-label="إعادة"><Redo2 className="size-4" /></Button>
       <Button size="sm" variant="glass" onClick={() => { setOpen(new Set()); setFull((f) => !f); }}>{full ? <Minimize2 className="size-4" /> : <Maximize2 className="size-4" />}{full ? "خروج" : "ملء الشاشة"}</Button>
