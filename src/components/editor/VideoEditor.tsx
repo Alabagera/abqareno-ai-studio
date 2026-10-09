@@ -330,18 +330,26 @@ export function VideoEditor({ projectId }: { projectId: string }) {
       const words = cap.text.split(/\s+/).filter(Boolean); const activeIdx = Math.min(words.length - 1, Math.floor(((t - cap.start) / (cap.end - cap.start)) * words.length));
       const cx = (cs.x / 100) * W; const y0 = (cs.y / 100) * H - ((lines.length - 1) * lh) / 2; const space = ctx.measureText(" ").width;
       let wi = 0; let boxW = 0;
+      const sc = (cs.activeScale ?? 100) / 100; const baseFont = ctx.font;
+      const fontAt = (k: number) => `700 ${fs * k}px "${cs.font}", "Noto Sans Arabic", sans-serif`;
+      const lineWords = lines.map((ln) => ln.split(" ").filter(Boolean));
+      let cnt = 0;
+      const metrics = lineWords.map((ws) => ws.map((w) => { const act = cs.highlight && cnt++ === activeIdx; ctx.font = act ? fontAt(sc) : baseFont; return { w, act, ww: ctx.measureText(w).width }; }));
+      ctx.font = baseFont;
       lines.forEach((ln, li) => {
-        const lw = ctx.measureText(ln).width; boxW = Math.max(boxW, lw); const y = y0 + li * lh;
-        if (cs.bg !== "transparent") { ctx.fillStyle = cs.bg; ctx.beginPath(); ctx.roundRect(cx - lw / 2 - fs * 0.4, y - lh / 2, lw + fs * 0.8, lh, fs * 0.25); ctx.fill(); }
+        const ms = metrics[li]; const lw = ms.reduce((a, m) => a + m.ww, 0) + space * Math.max(0, ms.length - 1); boxW = Math.max(boxW, lw); const y = y0 + li * lh;
+        const hasAct = ms.some((m) => m.act); const lhh = hasAct && sc > 1 ? lh * sc : lh;
+        if (cs.bg !== "transparent") { ctx.fillStyle = cs.bg; ctx.beginPath(); ctx.roundRect(cx - lw / 2 - fs * 0.4, y - lhh / 2, lw + fs * 0.8, lhh, fs * 0.25); ctx.fill(); }
         let x = rtl ? cx + lw / 2 : cx - lw / 2;
         ctx.textAlign = rtl ? "right" : "left"; ctx.direction = rtl ? "rtl" : "ltr";
-        for (const w of ln.split(" ").filter(Boolean)) {
-          const ww = ctx.measureText(w).width; const active = cs.highlight && wi === activeIdx;
-          const left = rtl ? x - ww : x;
-          if (active) { ctx.fillStyle = cs.activeBg; ctx.beginPath(); ctx.roundRect(left - fs * 0.12, y - lh * 0.42, ww + fs * 0.24, lh * 0.84, fs * 0.15); ctx.fill(); }
-          ctx.fillStyle = active ? cs.activeColor : cs.color; ctx.fillText(w, x, y);
-          x = rtl ? x - ww - space : x + ww + space; wi++;
+        for (const m of ms) {
+          const active = m.act; const left = rtl ? x - m.ww : x;
+          ctx.font = active ? fontAt(sc) : baseFont;
+          if (active) { const h = lh * 0.84 * sc; ctx.fillStyle = cs.activeBg; ctx.beginPath(); ctx.roundRect(left - fs * 0.12 * sc, y - h / 2, m.ww + fs * 0.24 * sc, h, fs * 0.15 * sc); ctx.fill(); }
+          ctx.fillStyle = active ? cs.activeColor : cs.color; ctx.fillText(m.w, x, y);
+          x = rtl ? x - m.ww - space : x + m.ww + space; wi++;
         }
+        ctx.font = baseFont;
       });
       hits.push({ type: "caption", id: cap.id, x: cx - boxW / 2 - fs * 0.4, y: y0 - lh / 2, w: boxW + fs * 0.8, h: lines.length * lh });
       if (cs.showTranslation && cap.translation) {
@@ -889,6 +897,7 @@ export function VideoEditor({ projectId }: { projectId: string }) {
         <div className="grid grid-cols-2 gap-2">
           <Check label="إظهار النص المنطوق" checked={cs.show} onChange={(show) => setCs({ show })} />
           <Check label="تمييز الكلمة المنطوقة" checked={cs.highlight} onChange={(highlight) => setCs({ highlight })} />
+          <Range label="حجم الكلمة المنطوقة" min={50} max={250} value={cs.activeScale ?? 100} suffix="%" onChange={(activeScale) => setCs({ activeScale })} />
           <Sel label="الخط" value={cs.font} onChange={(font) => { loadFont(font); setCs({ font }); }} options={FONTS.map((f) => ({ id: f, label: f }))} />
           <Range label="الحجم" min={20} max={140} value={cs.size} onChange={(size) => setCs({ size })} />
           <ColorIn label="لون النص" value={cs.color} onChange={(color) => setCs({ color })} />
