@@ -11,7 +11,7 @@ export interface AudioFx { mic: string; gain: number; bass: number; presence: nu
 export type Anim = "none" | "fade" | "pop" | "slideUp" | "slideSide" | "typewriter";
 
 export interface Clip {
-  id: string; kind: "video" | "image"; asset: Asset; natural: number; w?: number; h?: number; trimStart: number; trimEnd: number; imageDuration: number; speed: number;
+  id: string; kind: "video" | "image"; asset: Asset; natural: number; w?: number | undefined; h?: number | undefined; trimStart: number; trimEnd: number; imageDuration: number; speed: number;
   fit: "cover" | "contain"; kenBurns: boolean; transition: Transition; fadeIn: number; fadeOut: number; muted: boolean; flipX: boolean; rotate: number; zoom: number;
   filters: Filters; key: Keying; audio: AudioFx;
 }
