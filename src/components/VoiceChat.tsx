@@ -4,7 +4,6 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { AlabageraPortrait } from "@/components/AlabageraPortrait";
-import { supabase } from "@/integrations/supabase/client";
 import { VoiceRecorder, transcribeClip } from "@/lib/voice-recorder";
 import { exportDocument, type DocFormat } from "@/lib/doc-export";
 import { ttsUrl } from "@/lib/abq-voice";
