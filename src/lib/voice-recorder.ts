@@ -73,12 +73,13 @@ export class VoiceRecorder {
   }
 }
 
-export async function transcribeClip(clip: Blob, language = ""): Promise<string> {
+export async function transcribeClip(clip: Blob, language = "", context = ""): Promise<string> {
   const token = (await supabase.auth.getSession()).data.session?.access_token ?? "";
   const f = new FormData();
-  const ext = clip.type.includes("mp4") ? "m4a" : clip.type.includes("ogg") ? "ogg" : "webm";
+  const ext = clip.type.includes("wav") ? "wav" : clip.type.includes("mp4") ? "m4a" : clip.type.includes("ogg") ? "ogg" : "webm";
   f.append("file", new File([clip], `speech.${ext}`, { type: clip.type.startsWith("audio/") ? clip.type : "audio/webm" }));
   if (language) f.append("language", language);
+  if (context) f.append("context", context);
   const r = await fetch("/api/stt", { method: "POST", headers: { Authorization: `Bearer ${token}` }, body: f });
   if (!r.ok) throw new Error((await r.text()) || "تعذر تحويل الصوت إلى نص");
   return ((await r.json()) as { text: string }).text;

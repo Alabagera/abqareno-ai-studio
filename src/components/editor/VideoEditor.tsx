@@ -13,6 +13,7 @@ import { FONTS, SOCIAL_SIZES, loadFont } from "@/lib/studio-options";
 import { modelsFor } from "@/lib/ai/registry";
 import { decodeAudio, toWav, DEFAULT_FX, type VoiceFx } from "@/lib/voice-fx";
 import { transcribeClip } from "@/lib/voice-recorder";
+import { StickerLibrary } from "./StickerLibrary";
 import { Mixer } from "@/lib/editor/audio";
 import { keyed } from "@/lib/editor/keying";
 import { backupLocal, loadProject, saveProject } from "@/lib/editor/projects";
@@ -644,16 +645,28 @@ export function VideoEditor({ projectId }: { projectId: string }) {
         if (segStart >= 0 && ((quiet >= 8 && dur > 1) || (quiet >= 3 && dur > 14) || dur > 28 || i === rms.length - 1)) { segs.push([segStart / 20, (i - quiet + 3) / 20]); segStart = -1; quiet = 0; }
       });
       if (!segs.length) throw new Error("لم يُعثر على كلام في صوت الفيديو");
+      // Merge short neighbours into ~8-20s chunks: more context = better Arabic accuracy, fewer calls = faster.
+      const merged: [number, number][] = [];
+      for (const sg of segs) { const l = merged[merged.length - 1]; if (l && sg[0] - l[1] < 0.6 && sg[1] - l[0] < 20) l[1] = sg[1]; else merged.push([...sg]); }
+      const results: { a: number; b: number; text: string }[] = new Array(merged.length);
+      let next = 0, doneN = 0;
+      const worker = async () => {
+        while (next < merged.length) {
+          const i = next++; const [a, b] = merged[i]!;
+          const s0 = Math.max(0, Math.floor((a - 0.15) * rate)), s1 = Math.min(pcm.length, Math.ceil((b + 0.25) * rate));
+          if (s1 - s0 < rate * 0.3) { doneN++; continue; }
+          const seg = pcm.slice(s0, s1); let pk = 0; for (const v of seg) pk = Math.max(pk, Math.abs(v));
+          if (pk > 0) { const g = Math.min(8, 0.9 / pk); for (let k = 0; k < seg.length; k++) seg[k]! *= g; }
+          const ab = new AudioBuffer({ length: seg.length, numberOfChannels: 1, sampleRate: rate }); ab.copyToChannel(seg, 0);
+          const prev = results[i - 1]?.text?.slice(-200) ?? "";
+          const text = (await transcribeClip(new Blob([toWav(ab)], { type: "audio/wav" }), "", prev)).trim();
+          results[i] = { a, b, text }; doneN++;
+          setVstt(`جارٍ تحويل الكلام إلى نص… ${doneN}/${merged.length}`);
+        }
+      };
+      await Promise.all(Array.from({ length: Math.min(4, merged.length) }, worker));
       const caps: Caption[] = []; const allText: string[] = [];
-      for (const [i, [a, b]] of segs.entries()) {
-        setVstt(`جارٍ تحويل الكلام إلى نص… ${i + 1}/${segs.length}`);
-        const s0 = Math.floor(a * rate), s1 = Math.min(pcm.length, Math.ceil(b * rate)); if (s1 - s0 < rate * 0.3) continue;
-        const ab = new AudioBuffer({ length: s1 - s0, numberOfChannels: 1, sampleRate: rate }); ab.copyToChannel(pcm.slice(s0, s1), 0);
-        const text = (await transcribeClip(new Blob([toWav(ab)], { type: "audio/wav" }))).trim();
-        if (!text) continue; allText.push(text);
-        caps.push(...distribute(chunkText(text), a, b - a));
-        update((pp) => ({ ...pp, captions: [...caps] }));
-      }
+      for (const r of results) { if (!r?.text) continue; allText.push(r.text); caps.push(...distribute(chunkText(r.text), r.a, r.b - r.a)); }
       if (!caps.length) throw new Error("لم يُتعرف على كلام واضح");
       update((pp) => ({ ...pp, captions: caps, script: pp.script || allText.join("\n"), captionStyle: { ...pp.captionStyle, show: true } }));
       toast.success(`تم: ${caps.length} سطر متزامن مع كلام الفيديو`);

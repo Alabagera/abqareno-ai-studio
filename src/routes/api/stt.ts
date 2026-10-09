@@ -9,7 +9,10 @@ export const Route = createFileRoute("/api/stt")({
     const form = await request.formData().catch(() => null);
     const file = form?.get("file");
     if (!(file instanceof File) || !file.size || file.size > 20 * 1024 * 1024) return new Response("ملف صوت غير صالح", { status: 400 });
-    const audio = new File([file], "speech.webm", { type: file.type.startsWith("audio/") ? file.type : "audio/webm" });
+    const type = file.type.startsWith("audio/") ? file.type : "audio/webm";
+    const ext = type.includes("wav") ? "wav" : type.includes("mp4") || type.includes("m4a") ? "m4a" : type.includes("ogg") ? "ogg" : type.includes("mpeg") ? "mp3" : "webm";
+    const audio = new File([file], `speech.${ext}`, { type });
+    const context = String(form?.get("context") ?? "").slice(-300);
     const lang = String(form?.get("language") ?? "");
     try {
       const whisper = await linkedEndpoint(auth.sb, auth.userId, "whisper");
@@ -30,7 +33,7 @@ export const Route = createFileRoute("/api/stt")({
       f.append("response_format", "json");
       f.append("stream", "true");
       for (const l of lang ? [lang] : ["ar", "en"]) f.append("languages[]", l);
-      f.append("prompt", "تسجيل بالعربية والإنجليزية وقد يخلط المتحدث بينهما. اكتب العربية بإملاء صحيح وعلامات ترقيم، والإنجليزية بحروف لاتينية.");
+      f.append("prompt", `تفريغ حرفي دقيق لكلام عربي (فصحى أو لهجات مثل السودانية والخليجية والمصرية) وقد يخلط المتحدث الإنجليزية. اكتب كل كلمة كما نُطقت بإملاء عربي صحيح مع الهمزات والتاء المربوطة وعلامات الترقيم، دون ترجمة أو تلخيص، والإنجليزية بحروف لاتينية.${context ? ` السياق السابق: ${context}` : ""}`);
       const up = await fetch("https://ai.gateway.lovable.dev/v1/audio/transcriptions", { method: "POST", signal: request.signal, headers: { Authorization: `Bearer ${apiKey}` }, body: f });
       if (!up.ok || !up.body) { const raw = await up.text(); console.error("stt error", up.status, raw.slice(0, 300)); return new Response(raw || "تعذر تحويل الصوت", { status: up.status }); }
       const reader = up.body.getReader(); const dec = new TextDecoder(); let buf = "", text = "", done = "";
