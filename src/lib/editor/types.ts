@@ -26,7 +26,7 @@ export interface AudioLayer {
 }
 export interface Caption { id: string; start: number; end: number; text: string; translation: string }
 export interface CaptionStyle {
-  show: boolean; font: string; size: number; color: string; bg: string; activeColor: string; activeBg: string; highlight: boolean; x: number; y: number; maxWidth: number;
+  show: boolean; font: string; size: number; color: string; bg: string; activeColor: string; activeBg: string; highlight: boolean; activeScale?: number; x: number; y: number; maxWidth: number;
   showTranslation: boolean; targetLang: string; tFont: string; tSize: number; tColor: string; tBg: string; tY: number;
 }
 export interface TextItem { id: string; text: string; start: number; end: number; x: number; y: number; size: number; color: string; bg: string; font: string; bold: boolean; anim: Anim }
@@ -87,7 +87,7 @@ export const VOICES = [{ id: "Charon", l: "رجالي عميق" }, { id: "Orus",
 
 export const newProject = (): Project => ({
   version: 1, sizeId: "yt", clips: [], overlays: [], audios: [], captions: [], texts: [], script: "", voice: "Charon", masterGain: 100,
-  captionStyle: { show: true, font: "Cairo", size: 58, color: "#FFFFFF", bg: "rgba(0,0,0,0.55)", activeColor: "#1A1A2E", activeBg: "#FFD700", highlight: true, x: 50, y: 82, maxWidth: 86, showTranslation: false, targetLang: "en", tFont: "Montserrat", tSize: 40, tColor: "#FFD700", tBg: "rgba(0,0,0,0.45)", tY: 92 },
+  captionStyle: { show: true, font: "Cairo", size: 58, color: "#FFFFFF", bg: "rgba(0,0,0,0.55)", activeColor: "#1A1A2E", activeBg: "#FFD700", highlight: true, activeScale: 100, x: 50, y: 82, maxWidth: 86, showTranslation: false, targetLang: "en", tFont: "Montserrat", tSize: 40, tColor: "#FFD700", tBg: "rgba(0,0,0,0.45)", tY: 92 },
   brand: { bgColor: "#000000", bgImage: null, bgBlur: true, logo: null, logoX: 8, logoY: 8, logoSize: 12, logoOpacity: 90, vignette: 0, grain: 0, letterbox: false },
 });
 
