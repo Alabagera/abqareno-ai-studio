@@ -16,7 +16,7 @@ let warned = false;
 /** Returns an object URL for spoken audio using the chosen voice. Falls back to a preset if the avatar voice is unavailable. */
 export async function ttsUrl(text: string, choice: string, signal?: AbortSignal): Promise<string> {
   const token = (await supabase.auth.getSession()).data.session?.access_token ?? "";
-  const call = (body: object) => fetch("/api/tts", { method: "POST", signal, headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` }, body: JSON.stringify({ text, ...body }) });
+  const call = (body: object) => fetch("/api/tts", { method: "POST", signal: signal ?? null, headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` }, body: JSON.stringify({ text, ...body }) });
   let r: Response;
   if (choice.startsWith("profile:")) {
     r = await call({ voiceProfileId: choice.slice(8) });
