@@ -1047,7 +1047,7 @@ export function VideoEditor({ projectId }: { projectId: string }) {
         {theater && zoomV > 1.01 && <button type="button" onClick={() => setZoomV(1)} className="absolute right-4 top-4 rounded-full bg-background/50 px-3 py-1 text-xs text-foreground">{Math.round(zoomV * 100)}% · إعادة</button>}
       </div>); return theater ? createPortal(stage, document.body) : stage; })()}
       <div className="space-y-1 border-t border-border p-2" dir="rtl">
-        <input type="range" min={0} max={Math.max(total, 0.1)} step={0.05} value={time} disabled={isPlaying} onChange={(e) => void seek(+e.target.value)} className="w-full accent-[var(--gold)]" aria-label="الخط الزمني" dir="ltr" />
+        <input type="range" min={0} max={Math.max(total, 0.1)} step={0.05} value={time} onChange={(e) => scrub(+e.target.value)} className="w-full accent-[var(--gold)]" aria-label="الخط الزمني" dir="ltr" />
         <div className="flex flex-wrap items-center gap-1.5">
           <Button size="sm" variant="gold" onClick={togglePlay} disabled={exporting != null}>{isPlaying ? <Pause className="size-4" /> : <Play className="size-4" />}{isPlaying ? "إيقاف" : "تشغيل"}</Button>
           <span className="font-mono text-xs" dir="ltr">{fmt(time)} / {fmt(total)}</span>
