@@ -428,14 +428,17 @@ export function VideoEditor({ projectId }: { projectId: string }) {
   }
   const pauseAll = () => { for (const el of els.current.values()) if (!(el instanceof HTMLImageElement)) el.pause(); };
 
+  const jumpRef = useRef<number | null>(null);
   async function run(from: number, onProgress?: (t: number) => void) {
     if (!mixer.current) mixer.current = new Mixer();
     await mixer.current.resume();
     playing.current = true; setIsPlaying(true);
     const total = totalLen(projRef.current);
     const t0 = performance.now() - from * 1000; let lastUi = 0; let t = from;
+    let base = t0;
     while (playing.current) {
-      t = (performance.now() - t0) / 1000; if (t >= total) break;
+      if (jumpRef.current != null) { const j = jumpRef.current; jumpRef.current = null; base = performance.now() - j * 1000; for (const x of targets(j)) if (x.active) x.el.currentTime = x.at; }
+      t = (performance.now() - base) / 1000; if (t >= total) break;
       sync(t, total); draw(t);
       const now = performance.now(); if (now - lastUi > 120) { setTime(t); timeRef.current = t; onProgress?.(t); lastUi = now; }
       await frame();
@@ -444,6 +447,8 @@ export function VideoEditor({ projectId }: { projectId: string }) {
     const finished = playing.current; playing.current = false; setIsPlaying(false); setTime(Math.min(t, total)); timeRef.current = Math.min(t, total);
     return finished;
   }
+  // Scrubbing works while playing: the play loop jumps to the new time.
+  const scrub = (t: number) => { const v = Math.max(0, Math.min(total, t)); if (playing.current) { jumpRef.current = v; setTime(v); timeRef.current = v; } else void seek(v); };
   const togglePlay = () => {
     if (playing.current) { playing.current = false; return; }
     if (total <= 0) { toast.error("أضف فيديو أو صورة أولًا"); return; }
@@ -713,16 +718,19 @@ export function VideoEditor({ projectId }: { projectId: string }) {
   // ---------- canvas direct manipulation ----------
   const dragRef = useRef<{ type: SelType; id: string; sx: number; sy: number; ox: number; oy: number } | null>(null);
   const toCanvas = (e: React.PointerEvent<HTMLCanvasElement>) => { const c = e.currentTarget; const r = c.getBoundingClientRect(); return { x: ((e.clientX - r.left) / r.width) * c.width, y: ((e.clientY - r.top) / r.height) * c.height, W: c.width, H: c.height }; };
+  const tapTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   function onCanvasDown(e: React.PointerEvent<HTMLCanvasElement>) {
     const now = performance.now();
     // Second finger of a pinch must never count as a double-tap (that exited full screen).
     if (theater && (!e.isPrimary || pinch.current.pts.size > 0)) { lastTap.current = 0; return; }
-    if (now - lastTap.current < 320) { lastTap.current = 0; dragRef.current = null; if (theater) exitTheater(); else void enterTheater(); return; }
+    if (now - lastTap.current < 320) { lastTap.current = 0; if (tapTimer.current) clearTimeout(tapTimer.current); tapTimer.current = null; dragRef.current = null; if (theater) exitTheater(); else void enterTheater(); return; }
     lastTap.current = now;
-    if (theater) return;
+    // One tap = play/pause (delayed slightly so a double-tap can still open full screen).
+    const queueToggle = () => { if (tapTimer.current) clearTimeout(tapTimer.current); tapTimer.current = setTimeout(() => { tapTimer.current = null; if (pinch.current.pts.size < 2) togglePlay(); }, 330); };
+    if (theater) { queueToggle(); return; }
     const { x, y } = toCanvas(e);
     const hit = [...rects.current].reverse().find((r) => x >= r.x && x <= r.x + r.w && y >= r.y && y <= r.y + r.h);
-    if (!hit) { const m = locate(time); if (m) setSel({ type: "clip", id: m.clip.id }); return; }
+    if (!hit) { const m = locate(time); if (m) setSel({ type: "clip", id: m.clip.id }); queueToggle(); return; }
     setSel({ type: hit.type, id: hit.id });
     const p = projRef.current;
     const pos = hit.type === "overlay" ? p.overlays.find((o) => o.id === hit.id) : hit.type === "text" ? p.texts.find((t) => t.id === hit.id) : null;
@@ -1020,13 +1028,13 @@ export function VideoEditor({ projectId }: { projectId: string }) {
         {theater ? <div className="absolute inset-x-3 bottom-3 flex flex-col gap-2 rounded-2xl bg-background/40 p-2 text-foreground backdrop-blur" onPointerDown={(e) => e.stopPropagation()} style={rotated ? { transform: "rotate(90deg)", transformOrigin: "center", inset: "auto", width: "92dvh", left: "calc(50% - 46dvh)", top: "calc(50% - 40px)", right: "auto" } : undefined}>
           <div className="flex items-center gap-2 text-xs" dir="ltr">
             <span className="tabular-nums">{fmtT(time)}</span>
-            <input type="range" min={0} max={total} step={0.05} value={Math.min(time, total)} onChange={(e) => void seek(Number(e.target.value))} aria-label="تمرير الفيديو" className="flex-1 accent-[var(--gold)]" />
+            <input type="range" min={0} max={total} step={0.05} value={Math.min(time, total)} onChange={(e) => scrub(Number(e.target.value))} aria-label="تمرير الفيديو" className="flex-1 accent-[var(--gold)]" />
             <span className="tabular-nums">{fmtT(total)}</span>
           </div>
           <div className="flex items-center justify-center gap-2" dir="ltr">
-          <button type="button" onClick={() => void seek(Math.max(0, time - 10))} aria-label="رجوع 10 ثوانٍ" className="rounded-full bg-background/40 px-3 py-2 text-xs">-10</button>
+          <button type="button" onClick={() => scrub(time - 10)} aria-label="رجوع 10 ثوانٍ" className="rounded-full bg-background/40 px-3 py-2 text-xs">-10</button>
           <button type="button" onClick={togglePlay} aria-label="تشغيل" className="grid size-11 place-items-center rounded-full bg-gold text-primary-foreground">{isPlaying ? <Pause className="size-6" /> : <Play className="size-6" />}</button>
-          <button type="button" onClick={() => void seek(Math.min(total, time + 10))} aria-label="تقديم 10 ثوانٍ" className="rounded-full bg-background/40 px-3 py-2 text-xs">+10</button>
+          <button type="button" onClick={() => scrub(time + 10)} aria-label="تقديم 10 ثوانٍ" className="rounded-full bg-background/40 px-3 py-2 text-xs">+10</button>
           <button type="button" onClick={() => update((p) => ({ ...p, masterGain: Math.max(0, p.masterGain - 25) }))} aria-label="خفض الصوت" className="rounded-full bg-background/40 px-3 py-2 text-sm">🔉−</button>
           <select value={[0, 50, 100, 150, 200, 300, 400, 500, 700, 1000].includes(proj.masterGain) ? proj.masterGain : ""} onChange={(e) => update((p) => ({ ...p, masterGain: Number(e.target.value) }))} aria-label="مستوى الصوت" className="rounded-full bg-background/60 px-2 py-1.5 text-xs">
             {![0, 50, 100, 150, 200, 300, 400, 500, 700, 1000].includes(proj.masterGain) && <option value="">{proj.masterGain}%</option>}
@@ -1039,7 +1047,7 @@ export function VideoEditor({ projectId }: { projectId: string }) {
         {theater && zoomV > 1.01 && <button type="button" onClick={() => setZoomV(1)} className="absolute right-4 top-4 rounded-full bg-background/50 px-3 py-1 text-xs text-foreground">{Math.round(zoomV * 100)}% · إعادة</button>}
       </div>); return theater ? createPortal(stage, document.body) : stage; })()}
       <div className="space-y-1 border-t border-border p-2" dir="rtl">
-        <input type="range" min={0} max={Math.max(total, 0.1)} step={0.05} value={time} disabled={isPlaying} onChange={(e) => void seek(+e.target.value)} className="w-full accent-[var(--gold)]" aria-label="الخط الزمني" dir="ltr" />
+        <input type="range" min={0} max={Math.max(total, 0.1)} step={0.05} value={time} onChange={(e) => scrub(+e.target.value)} className="w-full accent-[var(--gold)]" aria-label="الخط الزمني" dir="ltr" />
         <div className="flex flex-wrap items-center gap-1.5">
           <Button size="sm" variant="gold" onClick={togglePlay} disabled={exporting != null}>{isPlaying ? <Pause className="size-4" /> : <Play className="size-4" />}{isPlaying ? "إيقاف" : "تشغيل"}</Button>
           <span className="font-mono text-xs" dir="ltr">{fmt(time)} / {fmt(total)}</span>
