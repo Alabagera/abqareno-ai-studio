@@ -337,7 +337,7 @@ export function VideoEditor({ projectId }: { projectId: string }) {
       const metrics = lineWords.map((ws) => ws.map((w) => { const act = cs.highlight && cnt++ === activeIdx; ctx.font = act ? fontAt(sc) : baseFont; return { w, act, ww: ctx.measureText(w).width }; }));
       ctx.font = baseFont;
       lines.forEach((ln, li) => {
-        const ms = metrics[li]; const lw = ms.reduce((a, m) => a + m.ww, 0) + space * Math.max(0, ms.length - 1); boxW = Math.max(boxW, lw); const y = y0 + li * lh;
+        const ms = metrics[li] ?? []; const lw = ms.reduce((a, m) => a + m.ww, 0) + space * Math.max(0, ms.length - 1); boxW = Math.max(boxW, lw); const y = y0 + li * lh;
         const hasAct = ms.some((m) => m.act); const lhh = hasAct && sc > 1 ? lh * sc : lh;
         if (cs.bg !== "transparent") { ctx.fillStyle = cs.bg; ctx.beginPath(); ctx.roundRect(cx - lw / 2 - fs * 0.4, y - lhh / 2, lw + fs * 0.8, lhh, fs * 0.25); ctx.fill(); }
         let x = rtl ? cx + lw / 2 : cx - lw / 2;
