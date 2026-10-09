@@ -2,7 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useRef, useState } from "react";
 import { toast } from "sonner";
-import { Download, Trash2, Upload } from "lucide-react";
+import { Download, Pencil, Trash2, Upload } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { KIND_META, uploadMedia, deleteMedia, downloadMedia, formatSize, type MediaKind } from "@/lib/media";
 import { MediaThumb } from "@/components/MediaThumb";
@@ -36,7 +36,12 @@ function Library() {
     if (!files?.length) return;
     setBusy(true);
     try {
-      for (const f of Array.from(files)) await uploadMedia(f);
+      for (const f of Array.from(files)) {
+        const ext = f.name.match(/\.[a-z0-9]{2,5}$/i)?.[0] ?? "";
+        const base = f.name.slice(0, f.name.length - ext.length);
+        const named = prompt(`اسم الملف (يستخدمه عبقرينو عند البحث والتشغيل):`, base)?.trim();
+        await uploadMedia(named && named !== base ? new File([f], `${named}${ext}`, { type: f.type }) : f);
+      }
       toast.success("تم الرفع");
       qc.invalidateQueries({ queryKey: ["assets"] });
     } catch (e) {
@@ -45,6 +50,15 @@ function Library() {
       setBusy(false);
       if (input.current) input.current.value = "";
     }
+  }
+
+  async function rename(id: string, name: string) {
+    const ext = name.match(/\.[a-z0-9]{2,5}$/i)?.[0] ?? "";
+    const next = prompt("الاسم الجديد:", name.slice(0, name.length - ext.length))?.trim();
+    if (!next) return;
+    const { error } = await supabase.from("media_assets").update({ name: `${next}${ext}` }).eq("id", id);
+    if (error) { toast.error(error.message); return; }
+    toast.success("تم تغيير الاسم"); qc.invalidateQueries({ queryKey: ["assets"] });
   }
 
   async function removeProject(id: string) {
@@ -101,15 +115,15 @@ function Library() {
       ) : list.length === 0 ? <Empty /> : (
         <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
           {list.map((a) => (
-            <div key={a.id} className="glass overflow-hidden rounded-2xl">
+            <div key={a.id} className="glass relative overflow-hidden rounded-2xl">
               <label className="absolute z-10 m-2 grid size-7 cursor-pointer place-items-center rounded-md bg-background"><input type="checkbox" checked={selected.includes(a.id)} onChange={(event) => setSelected((current) => event.target.checked ? [...current, a.id] : current.filter((id) => id !== a.id))} aria-label={`تحديد ${a.name}`} /></label>
               <MediaThumb path={a.storage_path} kind={a.kind} className="aspect-square w-full" />
-              <div className="flex items-center justify-between gap-1 p-2.5">
+              <div className="flex flex-col gap-1 p-2.5">
                 <div className="min-w-0">
-                  <p className="truncate text-xs" dir="ltr">{a.name}</p>
+                  <p className="truncate text-xs" dir="auto">{a.name}</p>
                   <p className="text-[10px] text-muted-foreground">{formatSize(a.size_bytes)}</p>
                 </div>
-                <div className="flex"><Button variant="ghost" size="icon" aria-label="تنزيل" onClick={() => downloadMedia(a.storage_path, a.name)}><Download /></Button><Button variant="ghost" size="icon" aria-label="حذف" onClick={async () => { if (!confirm("حذف الملف نهائيًا؟")) return; await deleteMedia(a.id, a.storage_path); qc.invalidateQueries({ queryKey: ["assets"] }); }}><Trash2 /></Button></div>
+                <div className="flex"><Button variant="ghost" size="icon" aria-label="تغيير الاسم" onClick={() => rename(a.id, a.name)}><Pencil /></Button><Button variant="ghost" size="icon" aria-label="تنزيل" onClick={() => downloadMedia(a.storage_path, a.name)}><Download /></Button><Button variant="ghost" size="icon" aria-label="حذف" onClick={async () => { if (!confirm("حذف الملف نهائيًا؟")) return; await deleteMedia(a.id, a.storage_path); qc.invalidateQueries({ queryKey: ["assets"] }); }}><Trash2 /></Button></div>
               </div>
             </div>
           ))}
