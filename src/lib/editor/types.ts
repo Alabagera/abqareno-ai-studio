@@ -11,7 +11,7 @@ export interface AudioFx { mic: string; gain: number; bass: number; presence: nu
 export type Anim = "none" | "fade" | "pop" | "slideUp" | "slideSide" | "typewriter";
 
 export interface Clip {
-  id: string; kind: "video" | "image"; asset: Asset; natural: number; trimStart: number; trimEnd: number; imageDuration: number; speed: number;
+  id: string; kind: "video" | "image"; asset: Asset; natural: number; w?: number | undefined; h?: number | undefined; trimStart: number; trimEnd: number; imageDuration: number; speed: number;
   fit: "cover" | "contain"; kenBurns: boolean; transition: Transition; fadeIn: number; fadeOut: number; muted: boolean; flipX: boolean; rotate: number; zoom: number;
   filters: Filters; key: Keying; audio: AudioFx;
 }
@@ -86,7 +86,7 @@ export const LANGS = [{ id: "en", l: "English" }, { id: "ar", l: "العربية
 export const VOICES = [{ id: "Charon", l: "رجالي عميق" }, { id: "Orus", l: "رجالي حازم" }, { id: "Kore", l: "نسائي واضح" }, { id: "Aoede", l: "نسائي دافئ" }];
 
 export const newProject = (): Project => ({
-  version: 1, sizeId: "yt", clips: [], overlays: [], audios: [], captions: [], texts: [], script: "", voice: "Charon", masterGain: 100,
+  version: 1, sizeId: "fit", clips: [], overlays: [], audios: [], captions: [], texts: [], script: "", voice: "Charon", masterGain: 100,
   captionStyle: { show: true, font: "Cairo", size: 58, color: "#FFFFFF", bg: "rgba(0,0,0,0.55)", activeColor: "#1A1A2E", activeBg: "#FFD700", highlight: true, activeScale: 100, x: 50, y: 82, maxWidth: 86, showTranslation: false, targetLang: "en", tFont: "Montserrat", tSize: 40, tColor: "#FFD700", tBg: "rgba(0,0,0,0.45)", tY: 92 },
   brand: { bgColor: "#000000", bgImage: null, bgBlur: true, logo: null, logoX: 8, logoY: 8, logoSize: 12, logoOpacity: 90, vignette: 0, grain: 0, letterbox: false },
 });
