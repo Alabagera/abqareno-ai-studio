@@ -59,6 +59,7 @@ function Journal() {
   const qc = useQueryClient();
   const { data: tasks = [] } = useQuery({ queryKey: ["journal-tasks"], queryFn: async () => ((await supabase.from("journal_tasks").select("*").order("created_at", { ascending: false })).data ?? []) as Task[] });
   const refresh = () => qc.invalidateQueries({ queryKey: ["journal-tasks"] });
+  useEffect(() => { const f = () => void refresh(); window.addEventListener("abq-journal", f); return () => window.removeEventListener("abq-journal", f); }); // eslint-disable-line react-hooks/exhaustive-deps
   const [tab, setTab] = useState<Repeat | "all">("all");
   const [form, setForm] = useState({ title: "", notes: "", repeat: "daily" as Repeat, remind: "", tone: "chime" });
   const [customTone, setCustomTone] = useState<{ path: string; url: string } | null>(null);
