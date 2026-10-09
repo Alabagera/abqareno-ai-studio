@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 
 export function ThemeToggle() {
   const [light, setLight] = useState(false);
-  useEffect(() => { setLight(document.documentElement.classList.contains("light")); }, []);
+  useEffect(() => { const f = () => setLight(document.documentElement.classList.contains("light")); f(); window.addEventListener("abq-theme", f); return () => window.removeEventListener("abq-theme", f); }, []);
   function toggle() {
     const next = !light;
     setLight(next);

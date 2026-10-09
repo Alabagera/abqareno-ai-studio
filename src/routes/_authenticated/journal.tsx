@@ -2,7 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { Bell, BellRing, CheckCircle2, Circle, Music, Plus, Quote, RotateCcw, Trash2, Trophy, Upload } from "lucide-react";
+import { Copy, Bell, BellRing, CheckCircle2, Circle, Music, Plus, Quote, RotateCcw, Trash2, Trophy, Upload } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { signedUrl, uploadMedia } from "@/lib/media";
 import { Button } from "@/components/ui/button";
@@ -59,6 +59,7 @@ function Journal() {
   const qc = useQueryClient();
   const { data: tasks = [] } = useQuery({ queryKey: ["journal-tasks"], queryFn: async () => ((await supabase.from("journal_tasks").select("*").order("created_at", { ascending: false })).data ?? []) as Task[] });
   const refresh = () => qc.invalidateQueries({ queryKey: ["journal-tasks"] });
+  useEffect(() => { const f = () => void refresh(); window.addEventListener("abq-journal", f); return () => window.removeEventListener("abq-journal", f); }); // eslint-disable-line react-hooks/exhaustive-deps
   const [tab, setTab] = useState<Repeat | "all">("all");
   const [form, setForm] = useState({ title: "", notes: "", repeat: "daily" as Repeat, remind: "", tone: "chime" });
   const [customTone, setCustomTone] = useState<{ path: string; url: string } | null>(null);
@@ -109,8 +110,8 @@ function Journal() {
 
   return (
     <div dir="rtl" className="mx-auto max-w-4xl space-y-3 py-2">
-      <header className="glass flex flex-wrap items-center gap-2 rounded-2xl px-3 py-2">
-        <Quote className="size-4 shrink-0 text-gold" /><p className="min-w-0 flex-1 truncate text-sm font-bold" dir="auto" title={quote}>{quote}</p>
+      <header className="glass flex flex-wrap items-center gap-2 rounded-2xl px-3 py-3">
+        <Quote className="size-4 shrink-0 text-gold" /><p className="min-w-0 flex-1 text-sm font-bold leading-relaxed" dir="auto">{quote}</p>
         <div className="flex items-center gap-1"><div className="h-1.5 w-16 overflow-hidden rounded-full bg-secondary"><div className="h-full rounded-full bg-gold transition-all duration-700" style={{ width: `${pct}%` }} /></div><span className="text-xs font-bold text-gold">{pct}%</span></div>
         {notifyPerm !== "granted" && typeof Notification !== "undefined" && <button type="button" aria-label="فعّل الإشعارات" onClick={async () => setNotifyPerm(await Notification.requestPermission())} className="text-gold"><BellRing className="size-4" /></button>}
       </header>
@@ -146,6 +147,7 @@ function Journal() {
               <div className="mt-1 flex flex-wrap gap-2 text-xs text-muted-foreground"><span className="rounded-full bg-secondary px-2">{repLabel(t.repeat)}</span>{t.remind_at && <span className="flex items-center gap-1"><Bell className="size-3" />{new Date(t.remind_at).toLocaleString("ar", { dateStyle: "medium", timeStyle: "short" })}</span>}</div>
               {t.remind_at && <input type="datetime-local" aria-label="تعديل وقت التذكير" defaultValue={toLocalInput(t.remind_at)} onBlur={async (e) => { if (!e.target.value) return; await supabase.from("journal_tasks").update({ remind_at: new Date(e.target.value).toISOString() }).eq("id", t.id); void refresh(); }} className="mt-1 h-8 rounded-lg border border-input bg-background px-2 text-xs" />}
             </div>
+            <button type="button" aria-label="نسخ نص المهمة" onClick={() => { void navigator.clipboard.writeText([t.title, t.notes].filter(Boolean).join("\n")).then(() => toast.success("نُسخ نص المهمة")); }} className="text-muted-foreground"><Copy className="size-4" /></button>
             <button type="button" aria-label="حذف" onClick={() => void remove(t)} className="text-muted-foreground"><Trash2 className="size-4" /></button>
           </div>
         ))}
@@ -160,6 +162,7 @@ function Journal() {
             <p dir="auto" className="flex-1 text-muted-foreground line-through decoration-gold">{t.title}</p>
             <span className="text-xs text-muted-foreground">{t.done_at && new Date(t.done_at).toLocaleDateString("ar")}</span>
             <button type="button" aria-label="إعادة المهمة" onClick={() => void reopen(t)} className="text-muted-foreground"><RotateCcw className="size-4" /></button>
+            <button type="button" aria-label="نسخ نص المهمة" onClick={() => { void navigator.clipboard.writeText([t.title, t.notes].filter(Boolean).join("\n")).then(() => toast.success("نُسخ نص المهمة")); }} className="text-muted-foreground"><Copy className="size-4" /></button>
             <button type="button" aria-label="حذف" onClick={() => void remove(t)} className="text-muted-foreground"><Trash2 className="size-4" /></button>
           </div>
         ))}
