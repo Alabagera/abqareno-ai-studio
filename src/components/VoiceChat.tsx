@@ -7,6 +7,8 @@ import { AlabageraPortrait } from "@/components/AlabageraPortrait";
 import { supabase } from "@/integrations/supabase/client";
 import { VoiceRecorder, transcribeClip } from "@/lib/voice-recorder";
 import { exportDocument, type DocFormat } from "@/lib/doc-export";
+import { ttsUrl } from "@/lib/abq-voice";
+import { VoicePicker, useVoiceChoice } from "@/components/VoicePicker";
 
 type Phase = "idle" | "listening" | "hearing" | "transcribing" | "thinking" | "speaking";
 type Line = { who: "me" | "bot"; text: string };
@@ -20,7 +22,7 @@ function cleanForSpeech(md: string) {
 export function VoiceChat({ onAsk, onClose }: { onAsk: (text: string) => Promise<string>; onClose: () => void }) {
   const [tab, setTab] = useState<"chat" | "dictate">("chat");
   const [lang, setLang] = useState("");
-  const [voice, setVoice] = useState("Charon");
+  const voice = useVoiceChoice();
   return <div className="fixed inset-0 z-[90] flex flex-col overflow-hidden bg-background" style={{ background: "radial-gradient(circle at 50% 30%, color-mix(in oklch, var(--gold) 16%, transparent), transparent 55%), var(--background)" }}>
     <div className="mx-auto flex w-full max-w-3xl flex-wrap items-center gap-2 p-3">
       <div className="flex gap-1 rounded-full bg-secondary p-1 text-xs">
@@ -28,7 +30,7 @@ export function VoiceChat({ onAsk, onClose }: { onAsk: (text: string) => Promise
         <button type="button" onClick={() => setTab("dictate")} className={`flex items-center gap-1 rounded-full px-3 py-1.5 ${tab === "dictate" ? "bg-gold text-primary-foreground" : ""}`}><NotebookPen className="size-3.5" />كلامي إلى مستند</button>
       </div>
       <select value={lang} onChange={(e) => setLang(e.target.value)} aria-label="لغة الكلام" className="rounded-full bg-secondary px-2 py-1.5 text-xs">{LANGS.map((l) => <option key={l.id} value={l.id}>{l.l}</option>)}</select>
-      {tab === "chat" && <select value={voice} onChange={(e) => setVoice(e.target.value)} aria-label="صوت عبقرينو" className="rounded-full bg-secondary px-2 py-1.5 text-xs"><option value="Charon">صوت رجالي عميق</option><option value="Orus">صوت رجالي حازم</option><option value="Kore">صوت نسائي واضح</option><option value="Aoede">صوت نسائي دافئ</option></select>}
+      {tab === "chat" && <VoicePicker />}
       <Button variant="ghost" size="icon" className="ms-auto" onClick={onClose} aria-label="إغلاق"><X /></Button>
     </div>
     {tab === "chat" ? <ChatPane key="c" onAsk={onAsk} lang={lang} voice={voice} /> : <DictatePane key="d" lang={lang} />}
@@ -77,12 +79,7 @@ function ChatPane({ onAsk, lang, voice }: { onAsk: (t: string) => Promise<string
   useEffect(() => { endRef.current?.scrollIntoView({ behavior: "smooth" }); }, [log, phase]);
   const rec = useRecorder(lang, 1400, (text) => void handle(text));
 
-  async function tts(text: string, signal: AbortSignal) {
-    const token = (await supabase.auth.getSession()).data.session?.access_token ?? "";
-    const r = await fetch("/api/tts", { method: "POST", signal, headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` }, body: JSON.stringify({ text, voice }) });
-    if (!r.ok) throw new Error((await r.text()) || "تعذر توليد الصوت");
-    return URL.createObjectURL(await r.blob());
-  }
+  const tts = (text: string, signal: AbortSignal) => ttsUrl(text, voice, signal);
   function play(url: string) {
     return new Promise<void>((resolve) => {
       const a = audioRef.current ?? new Audio(); audioRef.current = a;
