@@ -102,6 +102,7 @@ function wrap(ctx: CanvasRenderingContext2D, text: string, maxW: number) {
   return lines;
 }
 
+const fmtT = (s: number) => `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStart(2, "0")}`;
 export function VideoEditor({ projectId }: { projectId: string }) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const els = useRef(new Map<string, MediaEl>());
@@ -714,6 +715,8 @@ export function VideoEditor({ projectId }: { projectId: string }) {
   const toCanvas = (e: React.PointerEvent<HTMLCanvasElement>) => { const c = e.currentTarget; const r = c.getBoundingClientRect(); return { x: ((e.clientX - r.left) / r.width) * c.width, y: ((e.clientY - r.top) / r.height) * c.height, W: c.width, H: c.height }; };
   function onCanvasDown(e: React.PointerEvent<HTMLCanvasElement>) {
     const now = performance.now();
+    // Second finger of a pinch must never count as a double-tap (that exited full screen).
+    if (theater && (!e.isPrimary || pinch.current.pts.size > 0)) { lastTap.current = 0; return; }
     if (now - lastTap.current < 320) { lastTap.current = 0; dragRef.current = null; if (theater) exitTheater(); else void enterTheater(); return; }
     lastTap.current = now;
     if (theater) return;
@@ -863,7 +866,7 @@ export function VideoEditor({ projectId }: { projectId: string }) {
           </details>
           <div className="flex gap-2"><Button size="sm" variant="glass" onClick={duplicateSelected}><Copy className="size-3" />تكرار</Button><Button size="sm" variant="ghost" onClick={removeSelected}><Trash2 className="size-3" />حذف</Button></div>
         </div>}
-        <Range label="مستوى الصوت العام للفيديو" min={0} max={400} value={proj.masterGain} suffix="%" onChange={(v) => update((p) => ({ ...p, masterGain: v }))} />
+        <Range label="مستوى الصوت العام للفيديو" min={0} max={1000} value={proj.masterGain} suffix="%" onChange={(v) => update((p) => ({ ...p, masterGain: v }))} />
         <Range label="خفض الموسيقى تلقائيًا عند الكلام (Ducking)" min={0} max={100} value={proj.duck ?? 100} suffix="%" onChange={(v) => update((p) => ({ ...p, duck: v }))} />
         <div className="grid grid-cols-2 gap-2"><Range label="ظهور الصوت كله" min={0} max={10} step={0.1} suffix="s" value={proj.audioFadeIn ?? 0} onChange={(v) => update((p) => ({ ...p, audioFadeIn: v }))} /><Range label="اختفاء الصوت كله" min={0} max={10} step={0.1} suffix="s" value={proj.audioFadeOut ?? 0} onChange={(v) => update((p) => ({ ...p, audioFadeOut: v }))} /></div>
       </Section>
@@ -1008,15 +1011,30 @@ export function VideoEditor({ projectId }: { projectId: string }) {
       {(() => { const stage = (
       <div ref={stageRef} className={theater ? "fixed inset-0 z-[200] flex items-center justify-center overflow-hidden bg-black" : "relative flex flex-1 items-center justify-center bg-muted/40 p-2"}
         style={theater ? { touchAction: "none" } : undefined}
-        onPointerDown={(e) => { if (!theater) return; pinch.current.pts.set(e.pointerId, { x: e.clientX, y: e.clientY }); if (pinch.current.pts.size === 2) { const [a, b] = [...pinch.current.pts.values()]; pinch.current.d0 = Math.hypot(a!.x - b!.x, a!.y - b!.y); pinch.current.z0 = zoomV; } }}
+        onPointerDown={(e) => { if (!theater) return; pinch.current.pts.set(e.pointerId, { x: e.clientX, y: e.clientY }); if (pinch.current.pts.size >= 2) lastTap.current = 0; if (pinch.current.pts.size === 2) { const [a, b] = [...pinch.current.pts.values()]; pinch.current.d0 = Math.hypot(a!.x - b!.x, a!.y - b!.y); pinch.current.z0 = zoomV; } }}
         onPointerMove={(e) => { if (!theater || !pinch.current.pts.has(e.pointerId)) return; pinch.current.pts.set(e.pointerId, { x: e.clientX, y: e.clientY }); if (pinch.current.pts.size === 2 && pinch.current.d0) { const [a, b] = [...pinch.current.pts.values()]; setZoomV(clamp((pinch.current.z0 * Math.hypot(a!.x - b!.x, a!.y - b!.y)) / pinch.current.d0, 1, 5)); } }}
         onPointerUp={(e) => { pinch.current.pts.delete(e.pointerId); if (pinch.current.pts.size < 2) pinch.current.d0 = 0; }}
         onPointerCancel={(e) => { pinch.current.pts.delete(e.pointerId); pinch.current.d0 = 0; }}>
         <canvas ref={canvasRef} onPointerDown={onCanvasDown} onPointerMove={onCanvasMove} onPointerUp={() => (dragRef.current = null)} className={`touch-none bg-black ${theater ? "" : "rounded-lg shadow-lg"}`}
           style={theater ? (rotated ? { aspectRatio: `${ratio}`, width: `min(100dvh, calc(100vw * ${ratio}))`, maxWidth: "none", transform: `rotate(90deg) scale(${zoomV})` } : { aspectRatio: `${ratio}`, width: `min(100vw, calc(100dvh * ${ratio}))`, maxWidth: "none", transform: `scale(${zoomV})` }) : { aspectRatio: `${ratio}`, width: "100%", maxWidth: `calc(${viewerMax} * ${ratio})`, maxHeight: viewerMax }} />
-        {theater ? <div className="absolute bottom-4 left-1/2 flex -translate-x-1/2 gap-3 opacity-80" style={rotated ? { transform: "translateX(-50%)" } : undefined}>
-          <button type="button" onClick={togglePlay} aria-label="تشغيل" className="grid size-12 place-items-center rounded-full bg-background/40 text-foreground backdrop-blur">{isPlaying ? <Pause className="size-6" /> : <Play className="size-6" />}</button>
-          <button type="button" onClick={exitTheater} aria-label="خروج من العرض الكامل" className="grid size-12 place-items-center rounded-full bg-background/40 text-foreground backdrop-blur"><Minimize2 className="size-6" /></button>
+        {theater ? <div className="absolute inset-x-3 bottom-3 flex flex-col gap-2 rounded-2xl bg-background/40 p-2 text-foreground backdrop-blur" onPointerDown={(e) => e.stopPropagation()} style={rotated ? { transform: "rotate(90deg)", transformOrigin: "center", inset: "auto", width: "92dvh", left: "calc(50% - 46dvh)", top: "calc(50% - 40px)", right: "auto" } : undefined}>
+          <div className="flex items-center gap-2 text-xs" dir="ltr">
+            <span className="tabular-nums">{fmtT(time)}</span>
+            <input type="range" min={0} max={total} step={0.05} value={Math.min(time, total)} onChange={(e) => void seek(Number(e.target.value))} aria-label="تمرير الفيديو" className="flex-1 accent-[var(--gold)]" />
+            <span className="tabular-nums">{fmtT(total)}</span>
+          </div>
+          <div className="flex items-center justify-center gap-2" dir="ltr">
+          <button type="button" onClick={() => void seek(Math.max(0, time - 10))} aria-label="رجوع 10 ثوانٍ" className="rounded-full bg-background/40 px-3 py-2 text-xs">-10</button>
+          <button type="button" onClick={togglePlay} aria-label="تشغيل" className="grid size-11 place-items-center rounded-full bg-gold text-primary-foreground">{isPlaying ? <Pause className="size-6" /> : <Play className="size-6" />}</button>
+          <button type="button" onClick={() => void seek(Math.min(total, time + 10))} aria-label="تقديم 10 ثوانٍ" className="rounded-full bg-background/40 px-3 py-2 text-xs">+10</button>
+          <button type="button" onClick={() => update((p) => ({ ...p, masterGain: Math.max(0, p.masterGain - 25) }))} aria-label="خفض الصوت" className="rounded-full bg-background/40 px-3 py-2 text-sm">🔉−</button>
+          <select value={[0, 50, 100, 150, 200, 300, 400, 500, 700, 1000].includes(proj.masterGain) ? proj.masterGain : ""} onChange={(e) => update((p) => ({ ...p, masterGain: Number(e.target.value) }))} aria-label="مستوى الصوت" className="rounded-full bg-background/60 px-2 py-1.5 text-xs">
+            {![0, 50, 100, 150, 200, 300, 400, 500, 700, 1000].includes(proj.masterGain) && <option value="">{proj.masterGain}%</option>}
+            {[0, 50, 100, 150, 200, 300, 400, 500, 700, 1000].map((v) => <option key={v} value={v}>{v}%</option>)}
+          </select>
+          <button type="button" onClick={() => update((p) => ({ ...p, masterGain: Math.min(1000, p.masterGain + 25) }))} aria-label="رفع الصوت" className="rounded-full bg-background/40 px-3 py-2 text-sm">🔊+</button>
+          <button type="button" onClick={exitTheater} aria-label="خروج من العرض الكامل" className="grid size-10 place-items-center rounded-full bg-background/40"><Minimize2 className="size-5" /></button>
+          </div>
         </div> : <button type="button" onClick={() => void enterTheater()} aria-label="عرض الفيديو كاملًا" title="عرض كامل (أو اضغط مرتين على الفيديو)" className="absolute bottom-3 left-3 grid size-9 place-items-center rounded-full bg-background/70 text-gold shadow"><Maximize2 className="size-4" /></button>}
         {theater && zoomV > 1.01 && <button type="button" onClick={() => setZoomV(1)} className="absolute right-4 top-4 rounded-full bg-background/50 px-3 py-1 text-xs text-foreground">{Math.round(zoomV * 100)}% · إعادة</button>}
       </div>); return theater ? createPortal(stage, document.body) : stage; })()}
