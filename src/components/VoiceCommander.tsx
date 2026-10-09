@@ -71,7 +71,7 @@ export function VoiceCommander() {
   }
   const media = () => mediaEl.current;
 
-  async function execute(raw: string) {
+  async function execute(raw: string): Promise<unknown> {
     const t = norm(raw).trim();
     const body = after(raw);
     const has = (re: RegExp) => re.test(t);
