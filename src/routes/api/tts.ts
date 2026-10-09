@@ -3,7 +3,7 @@ import { authVoice, linkedEndpoint, selfHostedOnly } from "@/lib/voice-backend.s
 import { z } from "zod";
 
 // Professional spoken replies for the voice chat. Returns a complete WAV clip.
-const body = z.object({ text: z.string().trim().min(1).max(1500), voice: z.string().max(30).default("Charon") });
+const body = z.object({ text: z.string().trim().min(1).max(1500), voice: z.string().max(30).default("Charon"), voiceProfileId: z.string().uuid().optional() });
 
 export const Route = createFileRoute("/api/tts")({
   server: { handlers: { POST: async ({ request }) => {
@@ -15,8 +15,19 @@ export const Route = createFileRoute("/api/tts")({
     const isAr = /[\u0600-\u06FF]/.test(parsed.data.text);
     // Self-hosted XTTS-v2 replaces the paid voice automatically once linked.
     const xtts = await linkedEndpoint(auth.sb, auth.userId, "xtts-v2");
+    // Avatar voice from «هويتي»: cloned by XTTS from the saved sample (RLS-scoped read).
+    let speaker = "abqarino";
+    if (parsed.data.voiceProfileId) {
+      if (!xtts) return new Response("صوت الأفاتار المحفوظ يحتاج ربط نموذج XTTS بسيرفرك؛ يُستخدم صوت جاهز مؤقتًا.", { status: 424 });
+      const { data: prof } = await auth.sb.from("voice_profiles").select("primary_sample_asset_id,sample_asset_ids").eq("id", parsed.data.voiceProfileId).maybeSingle();
+      const assetId = prof?.primary_sample_asset_id ?? prof?.sample_asset_ids?.[0];
+      const { data: asset } = assetId ? await auth.sb.from("media_assets").select("storage_path").eq("id", assetId).maybeSingle() : { data: null };
+      const signed = asset ? (await auth.sb.storage.from("media").createSignedUrl(asset.storage_path, 600)).data?.signedUrl : null;
+      if (!signed) return new Response("لم أجد عينة صوت لهذا الأفاتار في هويتي", { status: 404 });
+      speaker = signed;
+    }
     if (xtts) {
-      const r = await fetch(`${xtts.url}/tts_to_audio/`, { method: "POST", headers: { "Content-Type": "application/json", ...(xtts.token ? { Authorization: `Bearer ${xtts.token}` } : {}) }, body: JSON.stringify({ text: parsed.data.text, speaker_wav: "abqarino", language: isAr ? "ar" : "en" }) }).catch(() => null);
+      const r = await fetch(`${xtts.url}/tts_to_audio/`, { method: "POST", headers: { "Content-Type": "application/json", ...(xtts.token ? { Authorization: `Bearer ${xtts.token}` } : {}) }, body: JSON.stringify({ text: parsed.data.text, speaker_wav: speaker, language: isAr ? "ar" : "en" }) }).catch(() => null);
       if (r?.ok && r.body) return new Response(r.body, { headers: { "Content-Type": r.headers.get("content-type") ?? "audio/wav", "Cache-Control": "no-cache", "X-Voice-Engine": "xtts" } });
       console.error("xtts failed", r?.status);
       return new Response("تعذر تشغيل صوت سيرفرك؛ لم تُستخدم خدمة مدفوعة. تحقق من XTTS.", { status: 502 });
