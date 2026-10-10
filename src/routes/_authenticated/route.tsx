@@ -7,6 +7,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { VoiceCommander } from "@/components/VoiceCommander";
 import { Button } from "@/components/ui/button";
 import { ThemeToggle } from "@/components/ThemeToggle";
+import { whatsappLink } from "@/lib/subscriptions";
 
 export const Route = createFileRoute("/_authenticated")({
   ssr: false,
@@ -64,7 +65,7 @@ function Layout() {
       </header>
 
       <main className="min-w-0 flex-1 px-3 pb-28 sm:px-4 md:px-10 md:py-8 md:pb-10">
-        {accessPending ? <div className="grid min-h-48 place-items-center text-muted-foreground">جارٍ تحميل صلاحياتك…</div> : access && requiredPermission && !can(requiredPermission) ? <div className="glass rounded-2xl p-8 text-center text-muted-foreground">لم يمنحك المدير صلاحية استخدام هذه الصفحة.</div> : <Outlet />}
+        {accessPending ? <div className="grid min-h-48 place-items-center text-muted-foreground">جارٍ تحميل صلاحياتك…</div> : access?.["expired"] && pathname !== "/dashboard" && pathname !== "/journal" ? <div className="glass rounded-2xl p-8 text-center"><p className="mb-4 font-bold">انتهى اشتراكك</p><p className="mb-5 text-sm text-muted-foreground">جدّد اشتراكك لتعود إلى كل الأقسام.</p><Button asChild variant="gold"><a href={whatsappLink("مرحبًا، أريد تجديد اشتراكي في عبقرينو AI Studio")} target="_blank" rel="noopener noreferrer">جدّد عبر واتساب</a></Button></div> : access && requiredPermission && !can(requiredPermission) ? <div className="glass rounded-2xl p-8 text-center text-muted-foreground">لم يمنحك المدير صلاحية استخدام هذه الصفحة.</div> : <Outlet />}
       </main>
 
       <nav className="glass fixed inset-x-2 bottom-2 z-40 flex justify-between overflow-x-auto rounded-2xl p-1 md:hidden" style={{ paddingBottom: "max(0.25rem, env(safe-area-inset-bottom))" }}>
