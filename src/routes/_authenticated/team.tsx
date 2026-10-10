@@ -7,6 +7,7 @@ import { ShieldCheck, Trash2, UserPlus, Users } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { createTeamMember, removeTeamMember } from "@/lib/team.functions";
+import { PLANS, planLabel } from "@/lib/subscriptions";
 import { PageHeader } from "@/components/PageHeader";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -68,7 +69,24 @@ function TeamPage() {
 function Permission({ label, checked, onChange }: { label: string; checked: boolean; onChange: (value: boolean) => void }) {
   return <label className="flex items-center gap-2 text-sm"><Checkbox checked={checked} onCheckedChange={(v) => onChange(v === true)} />{label}</label>;
 }
-function MemberControls({ member, onSaved }: { member: { id: string; max_videos: number | null; max_minutes_per_video: number | null; permissions: unknown }; onSaved: () => void }) {
+function SubscriptionControls({ member, onSaved }: { member: { id: string; plan: string; subscription_ends_at: string | null }; onSaved: () => void }) {
+  const [plan, setPlan] = useState(member.plan || "none");
+  const [ends, setEnds] = useState(member.subscription_ends_at ? member.subscription_ends_at.slice(0, 10) : "");
+  const expired = member.subscription_ends_at && new Date(member.subscription_ends_at) < new Date();
+  function pick(id: string) {
+    setPlan(id);
+    const p = PLANS.find((x) => x.id === id);
+    if (p?.days) setEnds(new Date(Date.now() + p.days * 864e5).toISOString().slice(0, 10));
+    if (id === "unlimited" || id === "none") setEnds("");
+  }
+  async function save() {
+    const { error } = await supabase.from("team_members").update({ plan, subscription_ends_at: ends ? new Date(`${ends}T23:59:59`).toISOString() : null }).eq("id", member.id);
+    if (error) toast.error(error.message); else { toast.success("تم حفظ الاشتراك"); onSaved(); }
+  }
+  return <div className="flex flex-wrap items-end gap-2 rounded-lg border p-2"><span className={`w-full text-xs ${expired ? "text-destructive" : "text-gold-soft"}`}>الاشتراك: {planLabel(member.plan)}{member.subscription_ends_at ? ` — ${expired ? "انتهى" : "ينتهي"} ${new Date(member.subscription_ends_at).toLocaleDateString("ar")}` : ""}</span><label className="flex-1 text-xs text-muted-foreground">الخطة<select className="mt-1 h-9 w-full rounded-md border border-input bg-background px-2" value={plan} onChange={(e) => pick(e.target.value)}><option value="none">بدون اشتراك (مفتوح)</option>{PLANS.map((p) => <option key={p.id} value={p.id}>{p.label}</option>)}</select></label><label className="flex-1 text-xs text-muted-foreground">تاريخ الانتهاء<Input type="date" value={ends} onChange={(e) => setEns(e.target.value)} className="mt-1 h-9" /></label><Button size="sm" variant="glass" onClick={save}>تفعيل</Button></div>;
+  function setEns(v: string) { setEnds(v); }
+}
+function MemberControls({ member, onSaved }: { member: { id: string; max_videos: number | null; max_minutes_per_video: number | null; permissions: unknown; plan: string; subscription_ends_at: string | null }; onSaved: () => void }) {
   const p = typeof member.permissions === "object" && member.permissions ? member.permissions as Record<string, unknown> : {};
   const [v, setV] = useState(member.max_videos?.toString() ?? "");
   const [m, setM] = useState(member.max_minutes_per_video?.toString() ?? "");
