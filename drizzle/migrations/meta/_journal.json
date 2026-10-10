@@ -64,6 +64,13 @@
       "when": 1791499701546,
       "tag": "0008_journal_tasks",
       "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1791656992639,
+      "tag": "0009_member_subscriptions",
+      "breakpoints": true
     }
   ]
 }

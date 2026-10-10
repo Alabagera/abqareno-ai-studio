@@ -49,11 +49,14 @@ function Index() {
     <div className="min-h-dvh">
       <header className="mx-auto flex max-w-6xl items-center justify-between px-5 py-5">
         <Logo />
+        <div className="flex gap-2">
+        <Button asChild variant="glass" size="sm"><Link to="/subscriptions">الاشتراكات</Link></Button>
         {user ? (
           <Button asChild variant="gold" size="sm"><Link to="/dashboard">لوحة التحكم</Link></Button>
         ) : (
           <Button asChild variant="glass" size="sm"><Link to="/auth">تسجيل الدخول</Link></Button>
         )}
+        </div>
       </header>
       <main className="mx-auto max-w-6xl px-5 pb-20">
         <section className="relative overflow-hidden py-10 text-center md:py-20">
