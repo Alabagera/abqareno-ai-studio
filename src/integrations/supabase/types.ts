@@ -366,8 +366,10 @@ export type Database = {
           member_id: string | null
           owner_id: string
           permissions: Json
+          plan: string
           role: Database["public"]["Enums"]["app_role"]
           status: string
+          subscription_ends_at: string | null
           updated_at: string
         }
         Insert: {
@@ -380,8 +382,10 @@ export type Database = {
           member_id?: string | null
           owner_id: string
           permissions?: Json
+          plan?: string
           role?: Database["public"]["Enums"]["app_role"]
           status?: string
+          subscription_ends_at?: string | null
           updated_at?: string
         }
         Update: {
@@ -394,8 +398,10 @@ export type Database = {
           member_id?: string | null
           owner_id?: string
           permissions?: Json
+          plan?: string
           role?: Database["public"]["Enums"]["app_role"]
           status?: string
+          subscription_ends_at?: string | null
           updated_at?: string
         }
         Relationships: []
@@ -625,6 +631,11 @@ export type Database = {
         }
         Returns: boolean
       }
+      member_subscription_active: {
+        Args: { _user_id: string }
+        Returns: boolean
+      }
+      my_subscription: { Args: never; Returns: Json }
       my_usage: { Args: never; Returns: Json }
       my_workspace_access: { Args: never; Returns: Json }
       workspace_owner_id: { Args: { _user_id: string }; Returns: string }
